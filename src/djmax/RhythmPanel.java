@@ -1806,11 +1806,19 @@ public final class RhythmPanel extends JPanel {
 
         Color rankColor = rankColor(result.rank());
         g.setColor(withAlpha(rankColor, 70));
-        g.fillOval(w / 2 - 70, cy - 75, 140, 140);
+        g.fillOval(w / 2 - 70, cy - 70, 140, 140);
         g.setFont(g.getFont().deriveFont(Font.BOLD, 96f));
         g.setColor(rankColor);
         fm = g.getFontMetrics();
-        drawCentered(g, fm, result.rank(), w, cy);
+        // drawCentered's y is a baseline, not a visual center — fine for ordinary text, but at 96pt
+        // the gap between "baseline" and "where the glyph actually looks centered" is big enough
+        // that the rank letter always sat noticeably above the middle of its own circle behind it,
+        // no matter how far down earlier fixes moved the whole results block (that only ever
+        // repositioned this pair together, never their relative offset — "여전히 인터페이스[the
+        // circle]보다 위치가 높고 변하질 않습니다"). Nudging the baseline down by half the
+        // ascent-minus-descent gap centers the glyph's visible band on cy instead.
+        int rankBaselineY = cy + (fm.getAscent() - fm.getDescent()) / 2;
+        drawCentered(g, fm, result.rank(), w, rankBaselineY);
         cy += 70;
 
         g.setFont(g.getFont().deriveFont(Font.BOLD, 30f));

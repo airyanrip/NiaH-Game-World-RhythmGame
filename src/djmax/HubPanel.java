@@ -1269,6 +1269,13 @@ final class HubPanel extends JPanel {
     }
 
     private static void styleOutlineButton(JButton b, Color accent) {
+        // Not focusable: Enter is a global WHEN_IN_FOCUSED_WINDOW binding on this panel (always
+        // plays the selected song — see the constructor), which loses to any focused component's
+        // own, more specific WHEN_FOCUSED binding. A button the player just clicked would otherwise
+        // keep keyboard focus and hijack the next Enter press for itself instead — "엔터는 재생만
+        // 되게" — so every Hub button opts out of holding focus at all; mouse clicks still work
+        // fine either way.
+        b.setFocusable(false);
         b.setFocusPainted(false);
         b.setBackground(BG_PANEL);
         b.setOpaque(true);
@@ -1288,6 +1295,7 @@ final class HubPanel extends JPanel {
     }
 
     private static void stylePrimaryButton(JButton b) {
+        b.setFocusable(false); // see styleOutlineButton's note — Enter must always mean "play"
         b.setFocusPainted(false);
         b.setBackground(ACCENT_GOLD);
         b.setForeground(Color.BLACK);

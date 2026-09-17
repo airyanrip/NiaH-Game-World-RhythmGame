@@ -93,6 +93,12 @@ final class TitleBar extends JPanel {
 
     private JButton chromeButton(String symbol, Runnable action, Color hoverBg) {
         JButton b = new JButton(symbol);
+        // Window-chrome buttons (minimize/maximize/close) shouldn't ever hold keyboard focus, same
+        // as a native title bar's — otherwise a click here leaves this button focused, and the
+        // look-and-feel's own focused-button Enter binding steals Enter away from HubPanel's global
+        // "Enter plays the selected song" handler (WHEN_IN_FOCUSED_WINDOW loses to a more specific
+        // WHEN_FOCUSED binding on whatever actually has focus) until the player clicks elsewhere.
+        b.setFocusable(false);
         b.setFocusPainted(false);
         b.setBorderPainted(false);
         b.setContentAreaFilled(true);
