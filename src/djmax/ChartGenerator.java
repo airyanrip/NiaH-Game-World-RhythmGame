@@ -196,6 +196,15 @@ public final class ChartGenerator {
     // spam, leaving everything else at the difficulty's normal pacing/note count.
     private static final double SAME_LANE_GAP_FACTOR = 2.0;
 
+    // A floor on how often a chord (see pickOnsets) can repeat, on top of clearing
+    // chordThresholdRatio — without it, a continuously loud/dense track (chordThresholdRatio alone
+    // doesn't care how BUSY a song is, only how loud one instant is relative to its own recent
+    // average) ended up with a chord every second or so, which reads as "this difficulty is just
+    // harder" rather than "an occasional highlight moment" — real-song testing against this mod's
+    // own library showed some tracks hitting 40-60 chords/minute uncapped, dropping to a still-
+    // noticeable-but-actually-occasional handful per minute with this in place.
+    private static final long CHORD_COOLDOWN_MS = 2000;
+
     private static List<Note> pickOnsets(double[] energy, double[][] bandEnergy, float sampleRate, Difficulty difficulty) {
         double thresholdRatio = difficulty.thresholdRatio;
         long minGapMs = difficulty.minGapMs;
@@ -208,6 +217,7 @@ public final class ChartGenerator {
         // previous note" for any realistic timeMs, without overflowing the subtraction.
         long lastNoteMs = Long.MIN_VALUE / 2;
         int lastLane = -1;
+        long lastChordMs = Long.MIN_VALUE / 2; // see CHORD_COOLDOWN_MS
         int lanes = bandEnergy.length;
         // Per-lane "busy until" time: while a long note's hold is still active in a lane, the
         // player's finger is physically still down on that key, so a second note can't land there
@@ -234,6 +244,24 @@ public final class ChartGenerator {
                 long holdMs = sustainMs(bandEnergy[lane], w, sampleRate);
                 notes.add(new Note(timeMs, timeMs + holdMs, lane));
                 laneBusyUntil[lane] = holdMs > 0 ? (timeMs + holdMs + minGapMs) : (timeMs + sameLaneMinGapMs);
+
+                // A genuinely climactic hit (loud enough to also qualify as a side-note moment — see
+                // chordThresholdRatio's own doc, "a rare, deliberate 'big hit' moment") presses a
+                // second lane at the very same instant instead of just another single note in the
+                // staircase — "하이라이트급 큰 음이 나오는 타이밍에 동시에 여러 라인을 입력하는". Reusing
+                // chordThresholdRatio (rather than a new knob) keeps this at the same "how loud is
+                // big" bar already tuned per difficulty, and EASY's Double.MAX_VALUE means it never
+                // qualifies there either — a beginner chart has no two-key-at-once moments.
+                int secondLane = laneChoice[1];
+                if (secondLane >= 0 && energy[w] > avg * difficulty.chordThresholdRatio
+                        && (timeMs - lastChordMs) >= CHORD_COOLDOWN_MS) {
+                    long secondHoldMs = sustainMs(bandEnergy[secondLane], w, sampleRate);
+                    notes.add(new Note(timeMs, timeMs + secondHoldMs, secondLane));
+                    laneBusyUntil[secondLane] = secondHoldMs > 0
+                            ? (timeMs + secondHoldMs + minGapMs) : (timeMs + sameLaneMinGapMs);
+                    lastChordMs = timeMs;
+                }
+
                 lastLane = lane;
                 lastNoteMs = timeMs;
             }

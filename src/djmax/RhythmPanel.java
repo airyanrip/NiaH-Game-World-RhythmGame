@@ -1025,6 +1025,141 @@ public final class RhythmPanel extends JPanel {
     /** Recomputes {@link #renderScale}/{@link #renderOffsetX}/{@link #renderOffsetY} from this
      *  panel's current actual size — called once per paint; {@link #pauseMenuItemAt} reads the same
      *  three fields to turn a raw mouse point back into design-space coordinates. */
+    // Below this, the side info card (title/difficulty/time/tally) is skipped entirely rather than
+    // squeezed in — a sliver of margin too narrow for it to read cleanly is worse than no card.
+    private static final int SIDE_INFO_MIN_MARGIN = 170;
+    private static final int SIDE_INFO_WIDTH = 190;
+
+    /** The song title/difficulty/elapsed-remaining time/live judgment tally, drawn in whichever
+     *  letterboxed margin {@link RhythmSettings#gameHorizontalAnchor()} leaves empty beside the lane
+     *  field — LEFT anchor empties the right margin, RIGHT anchor empties the left, and CENTER
+     *  splits both evenly (this picks the wider of the two, which is the right margin at a tie).
+     *  Skipped once results/game-over is showing (that screen already covers the same information)
+     *  and whenever neither margin is wide enough to hold it without overlapping the lane field. */
+    private void paintSideInfoPanel(Graphics2D g) {
+        if (finished) {
+            return;
+        }
+        int laneLeft = renderOffsetX;
+        int laneRight = (int) Math.round(renderOffsetX + TOTAL_WIDTH * renderScale);
+        int leftMargin = laneLeft;
+        int rightMargin = getWidth() - laneRight;
+        boolean useRight = rightMargin >= leftMargin;
+        int marginWidth = useRight ? rightMargin : leftMargin;
+        if (marginWidth < SIDE_INFO_MIN_MARGIN) {
+            return;
+        }
+
+        int cardW = Math.min(SIDE_INFO_WIDTH, marginWidth - 20);
+        int cardX = useRight ? laneRight + (rightMargin - cardW) / 2 : (leftMargin - cardW) / 2;
+        int cardY = Math.max(20, renderOffsetY);
+        int pad = 14;
+
+        g.setFont(g.getFont().deriveFont(Font.BOLD, 13f));
+        FontMetrics titleFm = g.getFontMetrics();
+        String title = chart.title == null ? "" : chart.title;
+        List<String> titleLines = wrapText(titleFm, title, cardW - pad * 2, 2);
+
+        int lineH = 20;
+        int cardH = pad * 2 + titleLines.size() * lineH + 8 + lineH + 12 + lineH + 14 + lineH + 4 * (lineH - 4);
+
+        g.setColor(new Color(20, 8, 18, 190));
+        g.fillRoundRect(cardX, cardY, cardW, cardH, 14, 14);
+        g.setColor(new Color(255, 255, 255, 35));
+        g.drawRoundRect(cardX, cardY, cardW, cardH, 14, 14);
+
+        int tx = cardX + pad;
+        int ty = cardY + pad + titleFm.getAscent();
+
+        g.setColor(Color.WHITE);
+        for (String line : titleLines) {
+            g.drawString(line, tx, ty);
+            ty += lineH;
+        }
+        ty += 8;
+
+        g.setFont(g.getFont().deriveFont(Font.PLAIN, 12f));
+        g.setColor(new Color(200, 190, 200));
+        g.drawString(Lang.t(settings, "hub.difficulty") + " " + difficultyLabel(), tx, ty);
+        ty += lineH + 12;
+
+        long elapsed = Math.max(0, Math.min(chart.lengthMs, nowMs()));
+        long remaining = Math.max(0, chart.lengthMs - elapsed);
+        g.setColor(Color.WHITE);
+        g.drawString(formatTime(elapsed) + " / " + formatTime(chart.lengthMs), tx, ty);
+        ty += lineH - 4;
+        g.setColor(new Color(160, 150, 160));
+        g.setFont(g.getFont().deriveFont(Font.PLAIN, 11f));
+        g.drawString("-" + formatTime(remaining), tx, ty);
+        ty += lineH + 14;
+
+        g.setFont(g.getFont().deriveFont(Font.BOLD, 12f));
+        g.setColor(new Color(255, 45, 138));
+        g.drawString("PERFECT " + perfects, tx, ty);
+        ty += lineH - 4;
+        g.setColor(new Color(190, 140, 230));
+        g.drawString("GREAT " + greats, tx, ty);
+        ty += lineH - 4;
+        g.setColor(new Color(255, 180, 210));
+        g.drawString("GOOD " + goods, tx, ty);
+        ty += lineH - 4;
+        g.setColor(Color.LIGHT_GRAY);
+        g.drawString("BREAK " + misses, tx, ty);
+    }
+
+    private String difficultyLabel() {
+        Difficulty diff = settings.songDifficulty(chart.audioFile.getName());
+        return switch (diff) {
+            case EASY -> Lang.t(settings, "settings.difficulty.easy");
+            case NORMAL -> Lang.t(settings, "settings.difficulty.normal");
+            case HARD -> Lang.t(settings, "settings.difficulty.hard");
+        };
+    }
+
+    private static String formatTime(long ms) {
+        long totalSec = Math.max(0, ms) / 1000;
+        return String.format("%d:%02d", totalSec / 60, totalSec % 60);
+    }
+
+    /** Greedily wraps {@code text} to fit within {@code maxWidth}, truncating with an ellipsis past
+     *  {@code maxLines} rather than letting a long song title overrun the card. */
+    private static List<String> wrapText(FontMetrics fm, String text, int maxWidth, int maxLines) {
+        List<String> lines = new ArrayList<>();
+        String remaining = text;
+        while (!remaining.isEmpty() && lines.size() < maxLines) {
+            int fit = remaining.length();
+            while (fit > 0 && fm.stringWidth(remaining.substring(0, fit)) > maxWidth) {
+                fit--;
+            }
+            if (fit == remaining.length()) {
+                lines.add(remaining);
+                remaining = "";
+            } else {
+                boolean lastLine = lines.size() == maxLines - 1;
+                if (lastLine) {
+                    String ellipsis = "…";
+                    int cut = fit;
+                    while (cut > 0 && fm.stringWidth(remaining.substring(0, cut) + ellipsis) > maxWidth) {
+                        cut--;
+                    }
+                    lines.add(remaining.substring(0, cut) + ellipsis);
+                    remaining = "";
+                } else {
+                    int breakAt = remaining.lastIndexOf(' ', fit);
+                    if (breakAt <= 0) {
+                        breakAt = fit;
+                    }
+                    lines.add(remaining.substring(0, breakAt).strip());
+                    remaining = remaining.substring(breakAt).strip();
+                }
+            }
+        }
+        if (lines.isEmpty()) {
+            lines.add("");
+        }
+        return lines;
+    }
+
     private void updateRenderTransform() {
         double scale = Math.min(getWidth() / (double) TOTAL_WIDTH, getHeight() / (double) PANEL_HEIGHT);
         renderScale = Math.max(scale, 0.01);
@@ -1067,6 +1202,12 @@ public final class RhythmPanel extends JPanel {
             BackgroundAnimator.paintImage(g, thumbnail, getWidth(), getHeight(),
                     settings.backgroundAspectMode(), settings.backgroundBrightnessPercent());
         }
+
+        // Same reasoning as the backdrop above: drawn against the panel's real, physical size,
+        // before the translate/scale below, so it lives in whichever letterboxed margin the lane
+        // field's own gameHorizontalAnchor left empty (see paintSideInfoPanel) instead of being
+        // squeezed into/scaled with the fixed-size lane design.
+        paintSideInfoPanel(g);
 
         g.translate(renderOffsetX, renderOffsetY);
         g.scale(renderScale, renderScale);
