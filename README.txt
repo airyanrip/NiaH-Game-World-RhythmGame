@@ -8,15 +8,15 @@
 1. 설치 방법
 ------------
 1) Little LUMI를 완전히 종료합니다 (트레이 아이콘까지 전부 종료).
-2) 이 zip 안의 "Niah" 폴더를 통째로 복사해서
+2) 이 zip 안의 "NiaH_RythmGame" 폴더를 통째로 복사해서
        Little LUMI 설치 폴더\mods\
    안에 붙여넣습니다.
-   예) C:\Program Files (x86)\Steam\steamapps\common\Little LUMI\mods\Niah\
-   (이미 Niah 폴더가 있다면 덮어써도 됩니다 — 다만 그전에 만든 플레이 기록/설정을
-    계속 쓰고 싶다면 기존 mods\Niah\ 폴더는 지우지 말고, 이 zip의 내용물만 그 위에
-    덮어씌우세요.)
+   예) C:\Program Files (x86)\Steam\steamapps\common\Little LUMI\mods\NiaH_RythmGame\
+   (이미 NiaH_RythmGame 폴더가 있다면 덮어써도 됩니다 — 다만 그전에 만든 플레이
+    기록/설정을 계속 쓰고 싶다면 기존 mods\NiaH_RythmGame\ 폴더는 지우지 말고, 이
+    zip의 내용물만 그 위에 덮어씌우세요.)
 3) Little LUMI를 실행합니다.
-4) 설정 > 모드(Mods) 탭에서 "Niah" 모드를 찾아 체크박스를 켜서 동의합니다.
+4) 설정 > 모드(Mods) 탭에서 "NiaH_RythmGame" 모드를 찾아 체크박스를 켜서 동의합니다.
    (코드가 들어있는 모드는 기본적으로 꺼져 있어서, 최초 1회 또는 jar이 바뀔 때마다
     이 동의가 필요합니다.)
 5) Little LUMI를 완전히 종료했다가 다시 실행합니다. (동의만으로는 바로 적용되지 않고,
@@ -70,5 +70,5 @@
 5. 저작권 안내
 --------------
 니아(Niah) 캐릭터 및 세계관의 저작권은 Nimble Neuron에 있습니다. 자세한 내용은
-Niah 폴더 안의 NOTICE.txt를 확인해주세요. 이 모드는 무료로 배포되며 상업적으로
-판매되지 않습니다.
+NiaH_RythmGame 폴더 안의 NOTICE.txt를 확인해주세요. 이 모드는 무료로 배포되며
+상업적으로 판매되지 않습니다.
