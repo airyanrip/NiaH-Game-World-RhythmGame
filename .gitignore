@@ -1,0 +1,6 @@
+build/
+stage/
+stub/
+dist/
+*.jar
+src_backup_before_pink_theme_20260914_133645/
