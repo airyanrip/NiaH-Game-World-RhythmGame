@@ -6,7 +6,7 @@ import java.awt.event.KeyEvent;
 import java.nio.file.Path;
 
 /**
- * Typed access to this plugin's own settings ({@code plugindata\local.niah.djmax\settings.properties}
+ * Typed access to this plugin's own settings ({@code plugindata\niah_rythmgame\settings.properties}
  * via {@link PluginPrefs}). No state of its own — every getter reads through, so the Hub/Settings
  * windows and gameplay always agree on the current value.
  */
@@ -37,7 +37,7 @@ final class RhythmSettings {
         this.prefs = prefs;
     }
 
-    /** {@code plugindata\local.niah.djmax\} — same folder the settings file itself lives in. */
+    /** {@code plugindata\niah_rythmgame\} — same folder the settings file itself lives in. */
     Path dataDir() {
         return prefs.file().getParent();
     }
@@ -50,8 +50,8 @@ final class RhythmSettings {
     // see PluginContext.PROTECTED_PREFIXES), and reaching around that boundary into internals never
     // meant for plugin use would be both fragile (an app update could rename/remove it without
     // notice, as already happened once to this mod's ffmpeg tooling) and outside what a plugin
-    // should be doing. So this is one plain local value instead — plugindata\local.niah.djmax\'s
-    // own settings.properties, same file everything else here already lives in. A brand new install
+    // should be doing. So this is one plain local value instead — plugindata\niah_rythmgame\'s own
+    // settings.properties, same file everything else here already lives in. A brand new install
     // starts at Lv.0 as requested. ──────────────────────────────────────────────────────────────
     private static final int RHYTHM_XP_PER_LEVEL = 100;
 

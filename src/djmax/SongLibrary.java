@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * The song library folder ({@code plugindata\local.niah.djmax\library\*.wav}) — both a WAV you
+ * The song library folder ({@code plugindata\niah_rythmgame\library\*.wav}) — both a WAV you
  * imported and a song downloaded from YouTube land here, side by side, so the Hub shows one list.
  */
 final class SongLibrary {

@@ -1,7 +1,7 @@
 니아 리듬게임 모드 (DJMAX Respect V 스타일) — 베타 테스트 가이드
 ================================================================
 
-버전: 1.50.0
+버전: 1.51.0
 필요 앱: Little LUMI 1.4.0 이상 (그보다 낮은 버전에서는 모드가 로드되지 않습니다)
 
 
@@ -12,9 +12,12 @@
        Little LUMI 설치 폴더\mods\
    안에 붙여넣습니다.
    예) C:\Program Files (x86)\Steam\steamapps\common\Little LUMI\mods\NiaH_RythmGame\
-   (이미 NiaH_RythmGame 폴더가 있다면 덮어써도 됩니다 — 다만 그전에 만든 플레이
-    기록/설정을 계속 쓰고 싶다면 기존 mods\NiaH_RythmGame\ 폴더는 지우지 말고, 이
-    zip의 내용물만 그 위에 덮어씌우세요.)
+   (업데이트하는 경우: 기존 mods\NiaH_RythmGame\ 폴더가 있다면 통째로 지우고 새로
+    풀어넣는 것을 권장합니다. 플레이 기록·설정·곡 라이브러리는 이 mods\ 폴더가
+    아니라 앱의 plugindata\ 안에 별도로 저장되어 있어서, mods\NiaH_RythmGame\
+    폴더를 지워도 사라지지 않습니다. 그 위에 그냥 덮어써도 되지만, 예전 버전의
+    jar 파일 이름이 바뀐 적이 있어 옛 jar가 같이 남아있으면 모드가 두 번 로드될 수
+    있으니 통째로 지우고 새로 넣는 쪽이 더 안전합니다.)
 3) Little LUMI를 실행합니다.
 4) 설정 > 모드(Mods) 탭에서 "NiaH_RythmGame" 모드를 찾아 체크박스를 켜서 동의합니다.
    (코드가 들어있는 모드는 기본적으로 꺼져 있어서, 최초 1회 또는 jar이 바뀔 때마다
@@ -22,6 +25,10 @@
 5) Little LUMI를 완전히 종료했다가 다시 실행합니다. (동의만으로는 바로 적용되지 않고,
    재시작해야 실제로 로드됩니다.)
 6) 니아 캐릭터를 우클릭하거나 트레이 메뉴에서 리듬게임 허브를 열면 준비 완료입니다.
+
+* v1.50.0 이전 버전(모드 이름이 "Niah"였던 버전)을 이미 써보셨다면, 처음 실행할
+  때 그때 만든 설정·곡 라이브러리·최고 기록을 자동으로 이 버전으로 옮겨옵니다.
+  옛 데이터는 지워지지 않고 그대로 남아있으니 걱정하지 않으셔도 됩니다.
 
 
 2. 알려진 제한 사항 (버그 아님)
@@ -35,7 +42,7 @@
   필요합니다: yt-dlp.exe, ffmpeg.exe
     - 다운로드: https://github.com/yt-dlp/yt-dlp/releases (yt-dlp.exe)
                 https://www.gyan.dev/ffmpeg/builds/ (ffmpeg.exe, "essentials" 빌드면 충분)
-    - 넣을 위치: Little LUMI 설치 폴더\app\plugindata\local.niah.djmax\tools\
+    - 넣을 위치: Little LUMI 설치 폴더\app\plugindata\niah_rythmgame\tools\
       (폴더가 없으면 새로 만들어서 두 exe 파일을 넣으면 됩니다.)
     - 로컬 wav 파일을 직접 추가해서 플레이하는 것은 이 도구 없이도 바로 됩니다.
 
