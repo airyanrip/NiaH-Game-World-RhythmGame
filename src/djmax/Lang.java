@@ -33,7 +33,7 @@ enum Lang {
     // key -> {ko, en}
     private static final Map<String, String[]> TABLE = Map.ofEntries(
             // Hub
-            Map.entry("hub.title", new String[]{"니아 리듬게임", "Niah Rhythm Game"}),
+            Map.entry("hub.title", new String[]{"니아의 게임월드", "Niah's Game World"}),
             Map.entry("hub.songs", new String[]{"곡 목록", "Songs"}),
             Map.entry("hub.addWav", new String[]{"WAV 파일 추가", "Add WAV file"}),
             Map.entry("hub.addUrl", new String[]{"URL로 추가", "Add from URL"}),
@@ -108,10 +108,10 @@ enum Lang {
             Map.entry("settings.restoreDefaults.confirm", new String[]{
                     "모든 설정(디스플레이/게임/사운드/키 설정)을 기본값으로 되돌릴까요?",
                     "Restore every setting (Display/Game/Sound/Controls) to its default?"}),
-            Map.entry("settings.exitGame", new String[]{"니아 리듬게임 전원 끄기", "Turn Off Niah Rhythm Game"}),
+            Map.entry("settings.exitGame", new String[]{"니아의 게임월드 전원 끄기", "Turn Off Niah's Game World"}),
             Map.entry("settings.exitGame.confirm", new String[]{
-                    "니아 리듬게임을 종료할까요? 진행 중인 게임이 있다면 저장되지 않습니다.",
-                    "Turn off Niah Rhythm Game? Any game in progress will not be saved."}),
+                    "니아의 게임월드를 종료할까요? 진행 중인 게임이 있다면 저장되지 않습니다.",
+                    "Turn off Niah's Game World? Any game in progress will not be saved."}),
             Map.entry("settings.autoPauseOnFocusLoss", new String[]{"포커스 아웃 시 자동 일시정지", "Auto-pause when unfocused"}),
             Map.entry("settings.background", new String[]{"배경 애니메이션 (유튜브 URL)", "Background animation (YouTube URL)"}),
             Map.entry("settings.background.enabled", new String[]{"배경 애니메이션 켜기", "Enable background animation"}),

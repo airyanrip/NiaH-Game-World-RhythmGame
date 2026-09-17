@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Song library, all on one screen — the "니아 리듬게임" hub. Painted with a fixed dark palette
+ * Song library, all on one screen — the "니아의 게임월드" hub. Painted with a fixed dark palette
  * (not {@link com.group_finity.mascot.lumi.plugin.PluginTheme}, which follows the host app's own
  * light/dark setting) so the song-select screen visually matches the gameplay screen it shares a
  * window with, instead of clashing if the app happens to be in light mode.

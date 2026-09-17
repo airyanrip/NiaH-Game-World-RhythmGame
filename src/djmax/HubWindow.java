@@ -445,7 +445,7 @@ final class HubWindow {
         }
     }
 
-    /** The Settings screen's "니아 리듬게임 전원 끄기" button — same as closing the window normally
+    /** The Settings screen's "니아의 게임월드 전원 끄기" button — same as closing the window normally
      *  (all the usual cleanup runs via the window-closed listener below), just reachable without
      *  hunting for the title bar in fullscreen or after minimizing. */
     private void exit() {
