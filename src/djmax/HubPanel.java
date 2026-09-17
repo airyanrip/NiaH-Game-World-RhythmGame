@@ -1082,6 +1082,7 @@ final class HubPanel extends JPanel {
         Thread worker = new Thread(() -> {
             try {
                 ctx.log().info("유튜브에서 내려받는 중: " + url);
+                ensureYoutubeTools();
                 YoutubeImporter.download(url, library.dir().toFile(), modTools, ctx.log());
                 ctx.onEdt(this::refreshLibrary);
             } catch (YoutubeImporter.MissingToolException ex) {
@@ -1093,6 +1094,25 @@ final class HubPanel extends JPanel {
         }, "niah-djmax-hub-youtube-import");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    /** Auto-fetches yt-dlp.exe/ffmpeg.exe into this mod's private tools folder the first time
+     *  either is missing (see {@link ToolInstaller}), so a player doesn't have to go find and place
+     *  them manually — called right before every YouTube import attempt; a no-op once both are
+     *  already there. A failure here is swallowed, not rethrown: the very next line,
+     *  {@code YoutubeImporter.download}, throws its own {@link YoutubeImporter.MissingToolException}
+     *  with manual-install instructions the instant it still can't find a tool, which becomes the
+     *  fallback for whatever this couldn't fetch (offline, a blocked network, ...). */
+    private void ensureYoutubeTools() {
+        if (modTools == null) {
+            return;
+        }
+        try {
+            ToolInstaller.ensureTools(modTools.toPath(),
+                    message -> ctx.onEdt(() -> libraryStatus.setText(message)));
+        } catch (Exception ex) {
+            ctx.log().warning("도구 자동 설치 실패 (수동 설치 안내로 대체): " + ex.getMessage());
+        }
     }
 
     private void deleteSelected() {

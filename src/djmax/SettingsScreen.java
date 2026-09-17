@@ -501,6 +501,14 @@ final class SettingsScreen {
             Path framesDir = settings.dataDir().resolve("background").resolve("frames");
             Thread worker = new Thread(() -> {
                 try {
+                    if (modTools != null) {
+                        try {
+                            ToolInstaller.ensureTools(modTools.toPath(),
+                                    message -> ctx.onEdt(() -> status.setText(message)));
+                        } catch (Exception ex) {
+                            ctx.log().warning("도구 자동 설치 실패 (수동 설치 안내로 대체): " + ex.getMessage());
+                        }
+                    }
                     BackgroundAnimator.download(url, framesDir, modTools, ctx.log());
                     ctx.onEdt(() -> {
                         status.setText(Lang.t(settings, "settings.background.done"));

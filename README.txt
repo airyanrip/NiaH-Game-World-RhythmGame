@@ -1,7 +1,7 @@
 니아 리듬게임 모드 (DJMAX Respect V 스타일) — 베타 테스트 가이드
 ================================================================
 
-버전: 1.51.0
+버전: 1.52.0
 필요 앱: Little LUMI 1.4.0 이상 (그보다 낮은 버전에서는 모드가 로드되지 않습니다)
 
 
@@ -38,10 +38,14 @@
   PC의 로컬 폴더만 참조하도록 만들어져 있습니다. 다른 PC에서는 조용히 건너뛰도록
   되어 있어 게임 진행 자체에는 지장이 없습니다.
 
-- 유튜브 URL로 곡 추가하기 / 애니메이션 배경 기능은 최초 사용 시 별도 프로그램이
-  필요합니다: yt-dlp.exe, ffmpeg.exe
-    - 다운로드: https://github.com/yt-dlp/yt-dlp/releases (yt-dlp.exe)
-                https://www.gyan.dev/ffmpeg/builds/ (ffmpeg.exe, "essentials" 빌드면 충분)
+- 유튜브 URL로 곡 추가하기 / 애니메이션 배경 기능은 내부적으로 yt-dlp.exe,
+  ffmpeg.exe가 필요한데, 최초로 이 기능을 쓸 때 모드가 알아서 백그라운드에서
+  자동으로 받아옵니다 — 따로 다운로드하거나 폴더에 넣어줄 필요가 없습니다.
+  (최초 1회만 다운로드 때문에 시간이 조금 걸릴 수 있습니다. 인터넷 환경 때문에
+   자동 다운로드가 실패하면, 그때는 아래 경로에 직접 받아서 넣어주시면 됩니다.)
+    - 수동 설치가 필요한 경우 다운로드: https://github.com/yt-dlp/yt-dlp/releases
+      (yt-dlp.exe), https://www.gyan.dev/ffmpeg/builds/ (ffmpeg.exe, "essentials"
+      빌드면 충분)
     - 넣을 위치: Little LUMI 설치 폴더\app\plugindata\niah_rythmgame\tools\
       (폴더가 없으면 새로 만들어서 두 exe 파일을 넣으면 됩니다.)
     - 로컬 wav 파일을 직접 추가해서 플레이하는 것은 이 도구 없이도 바로 됩니다.
