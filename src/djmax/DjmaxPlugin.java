@@ -14,8 +14,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 /** Entry point: one tray/character-menu row opens the Hub (song library, settings, play, chart editor). */
 public final class DjmaxPlugin implements LumiPlugin {
 
-    // This mod's public naming was unified to "NiaH_RythmGame" (plugin.json's id used to be
-    // "local.niah.djmax"). ctx.dataDir()/prefs() resolve entirely from that id, so the id change
+    // This mod's public/display name has since moved on to "NiaH's Game World" (plugin.json's
+    // "name"), but its id stays "niah_rythmgame" deliberately — id changes are the risky part (see
+    // below), so a display-only rename doesn't touch it. The id itself used to be "local.niah.djmax"
+    // before an earlier rename. ctx.dataDir()/prefs() resolve entirely from the id, so an id change
     // alone would silently orphan every existing install's data (settings, song library, saved
     // charts, downloaded background frames, yt-dlp/ffmpeg tools) under the old folder —
     // migrateOldDataDirIfNeeded below copies it forward once, the first time this new id's own
