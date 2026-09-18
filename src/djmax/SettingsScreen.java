@@ -364,6 +364,9 @@ final class SettingsScreen {
         JComboBox<String> aaCombo = onOffCombo(settings, settings.antiAliasing());
         pending.add(() -> settings.setAntiAliasing(isOn(aaCombo)));
 
+        JComboBox<String> sideInfoCombo = onOffCombo(settings, settings.sideInfoPanelEnabled());
+        pending.add(() -> settings.setSideInfoPanelEnabled(isOn(sideInfoCombo)));
+
         JComboBox<String> fpsCombo = styledCombo("30", "60", "120", "144");
         fpsCombo.setSelectedItem(String.valueOf(settings.fpsLimit()));
         pending.add(() -> settings.setFpsLimit(Integer.parseInt((String) fpsCombo.getSelectedItem())));
@@ -387,6 +390,7 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.songListStyle"), listStyleCombo));
         tab.add(row(Lang.t(settings, "settings.noteStyle"), noteStyleCombo));
         tab.add(row(Lang.t(settings, "settings.antiAliasing"), aaCombo));
+        tab.add(row(Lang.t(settings, "settings.sideInfoPanel"), sideInfoCombo));
         tab.add(row(Lang.t(settings, "settings.fpsLimit"), fpsCombo));
         tab.add(row(Lang.t(settings, "settings.colorVision"), cvCombo));
         return tab;
@@ -396,9 +400,11 @@ final class SettingsScreen {
 
     private static JPanel buildGameTab(PluginContext ctx, RhythmSettings settings, List<Runnable> pending,
                                         OffsetCalibrator.Overlay calibrationOverlay, LongConsumer[] offsetApplyHolder) {
-        JComboBox<String> langCombo = styledCombo("한국어", "English");
-        langCombo.setSelectedIndex(settings.language() == Lang.EN ? 1 : 0);
-        pending.add(() -> settings.setLanguage(langCombo.getSelectedIndex() == 1 ? Lang.EN : Lang.KO));
+        // Index matches Lang's own enum order (KO, EN, JA, ZH) so the combo's selection maps
+        // straight to Lang.values()[index] — no per-language special-casing needed here.
+        JComboBox<String> langCombo = styledCombo("한국어", "English", "日本語", "中文");
+        langCombo.setSelectedIndex(settings.language().ordinal());
+        pending.add(() -> settings.setLanguage(Lang.values()[langCombo.getSelectedIndex()]));
 
         JComboBox<String> countdownCombo = styledCombo("0", "3", "5");
         countdownCombo.setSelectedItem(String.valueOf(settings.countdownSeconds()));
@@ -804,13 +810,24 @@ final class SettingsScreen {
         combo.setForeground(ROW_VALUE);
         combo.setFocusable(true);
         combo.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        // Gives UiScale.rescale something real to work from: it walks the persistent component
+        // tree rescaling whatever font each JComponent already has, and the combo box itself sits
+        // in that tree (unlike the renderer below), so this is what makes the box's own
+        // preferred/dropdown-row size actually grow with the window, not just the text drawn in it.
+        combo.setFont(combo.getFont().deriveFont(Font.BOLD, 13f));
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object v, int index,
                                                             boolean isSelected, boolean cellHasFocus) {
                 JLabel l = (JLabel) super.getListCellRendererComponent(list, v, index, isSelected, cellHasFocus);
                 l.setHorizontalAlignment(SwingConstants.CENTER);
-                l.setFont(l.getFont().deriveFont(Font.BOLD, 13f));
+                // UiScale.f(13f), not a fixed 13f: this JLabel is a fresh, throwaway instance built
+                // by Swing on every paint/dropdown-open, never a lasting part of the component tree,
+                // so UiScale.rescale's tree walk can never reach it — reading the live scale factor
+                // here instead is what actually keeps the dropdown/closed-box text from staying
+                // pinned at a tiny fixed size no matter how big the window gets ("글자 크기가 너무
+                // 작습니다... 화면 비율에 따라 크고 작아지게").
+                l.setFont(l.getFont().deriveFont(Font.BOLD, UiScale.f(13f)));
                 if (!isSelected) {
                     l.setBackground(ROW_BG);
                     l.setForeground(ROW_VALUE);

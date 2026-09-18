@@ -376,6 +376,17 @@ final class RhythmSettings {
         prefs.set("anti_aliasing", on);
     }
 
+    // ── side info card (title/difficulty/time/tally, in the lane field's empty letterboxed
+    // margin — see RhythmPanel#paintSideInfoPanel) — on by default, toggle-off for players who'd
+    // rather keep that margin bare. ────────────────────────────────────────────────────────────
+    boolean sideInfoPanelEnabled() {
+        return prefs.getBoolean("side_info_panel_enabled", true);
+    }
+
+    void setSideInfoPanelEnabled(boolean on) {
+        prefs.set("side_info_panel_enabled", on);
+    }
+
     int fpsLimit() {
         int v = prefs.getInt("fps_limit", 60);
         return switch (v) {
@@ -492,6 +503,7 @@ final class RhythmSettings {
         setSongListStyle(SongListStyle.CAROUSEL);
         setNoteStyle(NoteStyle.RING);
         setAntiAliasing(true);
+        setSideInfoPanelEnabled(true);
         setFpsLimit(60);
         setColorVision(ColorVision.NORMAL);
         setLanguage(Lang.KO);

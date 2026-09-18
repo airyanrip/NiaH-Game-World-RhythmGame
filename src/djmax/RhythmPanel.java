@@ -1034,10 +1034,11 @@ public final class RhythmPanel extends JPanel {
      *  letterboxed margin {@link RhythmSettings#gameHorizontalAnchor()} leaves empty beside the lane
      *  field — LEFT anchor empties the right margin, RIGHT anchor empties the left, and CENTER
      *  splits both evenly (this picks the wider of the two, which is the right margin at a tie).
-     *  Skipped once results/game-over is showing (that screen already covers the same information)
-     *  and whenever neither margin is wide enough to hold it without overlapping the lane field. */
+     *  Skipped once results/game-over is showing (that screen already covers the same information),
+     *  whenever neither margin is wide enough to hold it without overlapping the lane field, and
+     *  whenever the player has turned it off in Settings ({@link RhythmSettings#sideInfoPanelEnabled()}). */
     private void paintSideInfoPanel(Graphics2D g) {
-        if (finished) {
+        if (finished || !settings.sideInfoPanelEnabled()) {
             return;
         }
         int laneLeft = renderOffsetX;
