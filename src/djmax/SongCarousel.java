@@ -319,8 +319,14 @@ final class SongCarousel extends JComponent {
         }
         int centerY = h / 2 + (int) Math.round(visualOffsetPx);
         // Capped at MAX_REACH regardless of how much taller the panel is than that — 5 rows showing
-        // at once is the point, not however many would technically fit.
-        int reach = Math.min(MAX_REACH, (size - 1) / 2);
+        // at once is the point, not however many would technically fit. size/2 (not (size-1)/2 —
+        // that undercounted by one row for every even-sized library, most visibly a 2-song library
+        // never showing its second song at all) is exactly how far you can go from the selected
+        // index in either direction before wrapping back onto a slot you've already placed: at
+        // reach == size/2 the two extreme slots legitimately land on the same "opposite" song for
+        // an even-sized ring (correct — it really is equidistant either way), never on two
+        // different songs colliding in one slot.
+        int reach = Math.min(MAX_REACH, size / 2);
 
         // Farthest first, nearest (selected) last — later painting sits visually on top, which is
         // what makes the selected card read as tucked in front of, not beside, its neighbors.

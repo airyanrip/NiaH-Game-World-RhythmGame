@@ -398,6 +398,11 @@ final class HubPanel extends JPanel {
             return row;
         });
         songList.setFixedCellHeight(UiScale.px(ROW_HEIGHT));
+        // JList stretches to fill the viewport once there are fewer rows than fit on screen (see
+        // JList.getScrollableTracksViewportHeight()) — without this, that leftover strip below the
+        // last row showed Swing's default white List.background instead of the theme.
+        songList.setBackground(BG_PANEL);
+        songList.setOpaque(true);
 
         JScrollPane scroll = new JScrollPane(songList);
         scroll.setBorder(BorderFactory.createLineBorder(BORDER));
