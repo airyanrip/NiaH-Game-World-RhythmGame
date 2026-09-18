@@ -183,6 +183,14 @@ final class HubPanel extends JPanel {
         // regardless of which component happens to have focus.
         songList.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "none");
         songList.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "none");
+        // Same story for Left/Right: the installed Look-and-Feel's default JList bindings treat a
+        // single-column list as one row of a grid ("selectPreviousColumn"/"selectNextColumn"), so
+        // Left/Right get silently consumed here too whenever the list itself has focus — which
+        // became the common case once every Hub button was made non-focusable (see TitleBar/
+        // styleOutlineButton's setFocusable(false)), starving this panel's own WHEN_IN_FOCUSED_WINDOW
+        // difficulty-paging binding below of the keystroke entirely.
+        songList.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "none");
+        songList.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "none");
 
         // The song-detail card's thumbnail slot is a fixed pixel number, not a font on some
         // component UiScale.rescale can walk to — it needs its own explicit nudge whenever the
@@ -204,10 +212,10 @@ final class HubPanel extends JPanel {
         });
 
         // Left/Right page through the selected song's difficulty from anywhere in the Hub, same
-        // WHEN_IN_FOCUSED_WINDOW reach as Enter above — a plain vertical JList has no default
-        // binding for either key (only Up/Down/Home/End/PageUp/PageDown), so this doesn't fight the
-        // classic list style's own navigation, and the URL field's own Left/Right (cursor movement,
-        // claimed at the more specific WHEN_FOCUSED scope) still wins while typing there.
+        // WHEN_IN_FOCUSED_WINDOW reach as Enter above. songList's own competing WHEN_FOCUSED
+        // Left/Right binding is disabled where songList is set up, above, so this is the one and
+        // only Left/Right handler regardless of focus — the URL field's own Left/Right (cursor
+        // movement, claimed at the more specific WHEN_FOCUSED scope) still wins while typing there.
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "hub.difficultyPrev");
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "hub.difficultyNext");
         getActionMap().put("hub.difficultyPrev", new AbstractAction() {
