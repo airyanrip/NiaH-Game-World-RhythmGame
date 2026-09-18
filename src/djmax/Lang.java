@@ -78,7 +78,7 @@ enum Lang {
             Map.entry("settings.songListStyle.carousel", new String[]{"휠 방식", "Wheel", "ホイール形式", "转盘形式"}),
             Map.entry("settings.noteStyle", new String[]{"노트 모양", "Note style", "ノーツの形", "音符样式"}),
             Map.entry("settings.noteStyle.ring", new String[]{"아케이드 드롭", "Arcade Drop", "アーケードドロップ", "街机掉落"}),
-            Map.entry("settings.noteStyle.classic", new String[]{"기존 직사각형", "Classic rectangle", "従来の長方形", "经典矩形"}),
+            Map.entry("settings.noteStyle.classic", new String[]{"직사각형", "Rectangle", "長方形", "矩形"}),
             Map.entry("settings.windowed", new String[]{"창 모드", "Windowed", "ウィンドウモード", "窗口模式"}),
             Map.entry("settings.fullscreen", new String[]{"전체화면", "Fullscreen", "フルスクリーン", "全屏"}),
             Map.entry("settings.antiAliasing", new String[]{"계단현상 방지 (안티에일리어싱)", "Anti-aliasing", "アンチエイリアス（ジャギー軽減）", "抗锯齿"}),
