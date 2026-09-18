@@ -1233,7 +1233,20 @@ public final class RhythmPanel extends JPanel {
         // before the translate/scale below, so it lives in whichever letterboxed margin the lane
         // field's own gameHorizontalAnchor left empty (see paintSideInfoPanel) instead of being
         // squeezed into/scaled with the fixed-size lane design.
-        paintSideInfoPanel(g);
+        //
+        // Guarded — unlike everything else painted above and below it, this is a purely decorative
+        // add-on with no gameplay role, so a bug in it (a divide-by-zero from an extreme
+        // renderScale, a malformed song title, ...) must never be allowed to abort the rest of this
+        // method: paintComponent has no other exception handling, and Swing's own paint dispatch
+        // doesn't always surface an uncaught exception here the same way it does for a Timer/event
+        // callback (it can end up on stderr instead of this app's own log, easy to miss) — so a
+        // throw here could silently skip the lane field/notes/judge line drawn just below for every
+        // subsequent frame, i.e. exactly "화면이 멈춘 것처럼 보인다" with no visible cause.
+        try {
+            paintSideInfoPanel(g);
+        } catch (RuntimeException ex) {
+            java.util.logging.Logger.getLogger("djmax").warning("side info card paint failed: " + ex);
+        }
 
         g.translate(renderOffsetX, renderOffsetY);
         g.scale(renderScale, renderScale);
