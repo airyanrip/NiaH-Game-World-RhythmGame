@@ -151,6 +151,12 @@ public final class RhythmPanel extends JPanel {
     /** The lead-in formula's "now" at the exact instant playback took over — see {@link #nowMs()}. */
     private long leadInEndNowMs;
     private boolean paused;
+    /** True while the post-CONTINUE 3-2-1 countdown (see {@link #beginResumeCountdown}) is
+     *  playing — {@link #paused} stays true the whole time (input/tick stay frozen exactly like a
+     *  normal pause), this just picks which overlay {@link #paintComponent} draws and which one
+     *  {@link #tick()} counts down. */
+    private boolean resuming;
+    private static final long RESUME_COUNTDOWN_MS = 3000;
     private static final String[] PAUSE_MENU = {"CONTINUE", "RESTART", "MUSIC SELECT", "EXIT"};
     private int pauseMenuIndex;
     /** Full-width hover/click bands for each pause item, in logical (pre-transform) coordinates — filled in by {@link #paintPauseMenu}. */
@@ -267,6 +273,9 @@ public final class RhythmPanel extends JPanel {
                     return;
                 }
                 if (paused) {
+                    if (resuming) {
+                        return; // ignore all input while the resume countdown plays
+                    }
                     switch (code) {
                         case KeyEvent.VK_UP -> {
                             pauseMenuIndex = (pauseMenuIndex + PAUSE_MENU.length - 1) % PAUSE_MENU.length;
@@ -326,7 +335,7 @@ public final class RhythmPanel extends JPanel {
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                if (!paused) {
+                if (!paused || resuming) {
                     return;
                 }
                 int hit = pauseMenuItemAt(e.getPoint());
@@ -340,7 +349,7 @@ public final class RhythmPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!paused) {
+                if (!paused || resuming) {
                     return;
                 }
                 int hit = pauseMenuItemAt(e.getPoint());
@@ -447,26 +456,31 @@ public final class RhythmPanel extends JPanel {
 
     /** ESC: freezes the clip where it is (its position is the "now" everything else reads, so
      *  simply not advancing it is the pause) and stops treating unhit notes as misses meanwhile.
-     *  Unpausing resumes right where it froze — no countdown in between: an earlier version showed
-     *  a 3-2-1 countdown here (the same overlay {@link #beginLeadIn}'s pre-song one uses), meant as
-     *  "a moment to get your fingers back on the keys," but a quick ESC-ESC (pause, then un-pause
-     *  right away) made that overlay flash up and read as the whole run restarting from scratch —
-     *  nothing was actually reset (score/combo/notes are untouched either way), but it looked like
-     *  it was, since the countdown screen gives no visual sign that it isn't. Resuming instantly
-     *  avoids that confusion entirely. */
+     *  Unpausing (CONTINUE, or ESC again) doesn't resume immediately — it hands off to {@link
+     *  #beginResumeCountdown}, which keeps everything frozen for one more 3-2-1 beat so the player
+     *  gets their fingers back on the keys before notes start moving again. */
     private void togglePause() {
         if (!started || leadingIn) {
             return;
         }
         if (paused) {
-            paused = false;
-            clip.start();
+            beginResumeCountdown();
         } else {
             paused = true;
             pauseMenuIndex = 0; // CONTINUE highlighted by default, same as DJMAX
             clip.stop();
         }
         repaint();
+    }
+
+    /** CONTINUE (or ESC) from the pause menu: reuses the same 3-2-1 overlay {@link #beginLeadIn}'s
+     *  pre-song countdown uses. {@link #paused} is left true the whole time — {@link #tick()} and
+     *  the key/mouse handlers keep treating this exactly like a normal pause (frozen notes, no
+     *  input) until the countdown reaches zero, at which point playback actually resumes. */
+    private void beginResumeCountdown() {
+        resuming = true;
+        countdownRemainingMs = (int) RESUME_COUNTDOWN_MS;
+        lastTickWallMs = System.currentTimeMillis();
     }
 
     /** @return the pause menu item under {@code p} (panel/physical coordinates), or -1 for none. */
@@ -540,6 +554,7 @@ public final class RhythmPanel extends JPanel {
         health = MAX_HEALTH;
         gameOver = false;
         paused = false;
+        resuming = false;
         started = false;
         leadingIn = false;
         leadInEndNowMs = 0;
@@ -586,6 +601,18 @@ public final class RhythmPanel extends JPanel {
             lastTickWallMs = now;
             if (countdownRemainingMs <= 0) {
                 beginLeadIn();
+            }
+            repaint();
+            return;
+        }
+        if (resuming) {
+            long now = System.currentTimeMillis();
+            countdownRemainingMs -= (int) (now - lastTickWallMs);
+            lastTickWallMs = now;
+            if (countdownRemainingMs <= 0) {
+                resuming = false;
+                paused = false;
+                clip.start();
             }
             repaint();
             return;
@@ -1372,10 +1399,10 @@ public final class RhythmPanel extends JPanel {
             lane.drawString(Lang.t(settings, "game.pause"), 10, PANEL_HEIGHT - 26);
         }
 
-        if (counting) {
+        if (counting || resuming) {
             paintCountdown(lane, panelWidth);
         }
-        if (paused) {
+        if (paused && !resuming) {
             paintPauseMenu(lane, panelWidth);
         }
         if (finished && result != null) {
