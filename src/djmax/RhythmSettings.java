@@ -27,8 +27,8 @@ final class RhythmSettings {
     enum SongListStyle { LIST, CAROUSEL }
 
     /** How falling lane notes are drawn — the ring/"coin" style with the pinwheel-cross glyph
-     *  (RING, the default) or the original thin rounded-rectangle pill (CLASSIC) — see
-     *  {@link RhythmPanel#paintNote}. */
+     *  (RING, shown to players as "아케이드 드롭"/"Arcade Drop", the default) or the original thin
+     *  rounded-rectangle pill (CLASSIC) — see {@link RhythmPanel#paintNote}. */
     enum NoteStyle { RING, CLASSIC }
 
     private final PluginPrefs prefs;
