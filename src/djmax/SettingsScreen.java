@@ -367,6 +367,9 @@ final class SettingsScreen {
         JComboBox<String> sideInfoCombo = onOffCombo(settings, settings.sideInfoPanelEnabled());
         pending.add(() -> settings.setSideInfoPanelEnabled(isOn(sideInfoCombo)));
 
+        JPanel sideInfoOpacityValue = percentSlider(settings.sideInfoPanelOpacityPercent(), 0, 100,
+                settings::setSideInfoPanelOpacityPercent, pending);
+
         JComboBox<String> fpsCombo = styledCombo("30", "60", "120", "144");
         fpsCombo.setSelectedItem(String.valueOf(settings.fpsLimit()));
         pending.add(() -> settings.setFpsLimit(Integer.parseInt((String) fpsCombo.getSelectedItem())));
@@ -391,6 +394,7 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.noteStyle"), noteStyleCombo));
         tab.add(row(Lang.t(settings, "settings.antiAliasing"), aaCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel"), sideInfoCombo));
+        tab.add(row(Lang.t(settings, "settings.sideInfoPanel.opacity"), sideInfoOpacityValue));
         tab.add(row(Lang.t(settings, "settings.fpsLimit"), fpsCombo));
         tab.add(row(Lang.t(settings, "settings.colorVision"), cvCombo));
         return tab;

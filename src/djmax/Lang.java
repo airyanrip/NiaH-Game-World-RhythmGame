@@ -83,6 +83,7 @@ enum Lang {
             Map.entry("settings.fullscreen", new String[]{"전체화면", "Fullscreen", "フルスクリーン", "全屏"}),
             Map.entry("settings.antiAliasing", new String[]{"계단현상 방지 (안티에일리어싱)", "Anti-aliasing", "アンチエイリアス（ジャギー軽減）", "抗锯齿"}),
             Map.entry("settings.sideInfoPanel", new String[]{"곡 정보 카드 (빈 공간)", "Song info card (side margin)", "曲情報カード（余白部分）", "曲目信息卡（侧边空白）"}),
+            Map.entry("settings.sideInfoPanel.opacity", new String[]{"곡 정보 카드 투명도", "Song info card opacity", "曲情報カードの不透明度", "曲目信息卡不透明度"}),
             Map.entry("settings.fpsLimit", new String[]{"초당 프레임 제한", "Frame rate limit", "フレームレート制限", "帧率限制"}),
             Map.entry("settings.colorVision", new String[]{"색각 보정", "Color vision", "色覚補正", "色觉校正"}),
             Map.entry("settings.colorVision.normal", new String[]{"보통", "Normal", "標準", "普通"}),

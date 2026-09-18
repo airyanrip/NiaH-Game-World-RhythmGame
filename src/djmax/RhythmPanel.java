@@ -1041,33 +1041,48 @@ public final class RhythmPanel extends JPanel {
         if (finished || !settings.sideInfoPanelEnabled()) {
             return;
         }
+        // Every fixed pixel/font size below is scaled by renderScale — the same factor the lane
+        // field itself grows by — so this card grows and shrinks right along with it instead of
+        // staying pinned at its design-time size no matter how big the letterboxed lane field gets
+        // ("화면 비율에 비해 너무 작을 때가 많습니다"). This method draws in raw window coordinates
+        // (before the lane field's own g.translate/scale), so it has to do that scaling itself
+        // rather than inheriting it from a transform.
         int laneLeft = renderOffsetX;
         int laneRight = (int) Math.round(renderOffsetX + TOTAL_WIDTH * renderScale);
         int leftMargin = laneLeft;
         int rightMargin = getWidth() - laneRight;
         boolean useRight = rightMargin >= leftMargin;
         int marginWidth = useRight ? rightMargin : leftMargin;
-        if (marginWidth < SIDE_INFO_MIN_MARGIN) {
+        if (marginWidth < sp(SIDE_INFO_MIN_MARGIN)) {
             return;
         }
 
-        int cardW = Math.min(SIDE_INFO_WIDTH, marginWidth - 20);
+        int cardW = Math.min(sp(SIDE_INFO_WIDTH), marginWidth - sp(20));
         int cardX = useRight ? laneRight + (rightMargin - cardW) / 2 : (leftMargin - cardW) / 2;
-        int cardY = Math.max(20, renderOffsetY);
-        int pad = 14;
+        int cardY = Math.max(sp(20), renderOffsetY);
+        int pad = sp(14);
+        int corner = sp(14);
 
-        g.setFont(g.getFont().deriveFont(Font.BOLD, 13f));
+        g.setFont(g.getFont().deriveFont(Font.BOLD, sf(13f)));
         FontMetrics titleFm = g.getFontMetrics();
         String title = chart.title == null ? "" : chart.title;
         List<String> titleLines = wrapText(titleFm, title, cardW - pad * 2, 2);
 
-        int lineH = 20;
-        int cardH = pad * 2 + titleLines.size() * lineH + 8 + lineH + 12 + lineH + 14 + lineH + 4 * (lineH - 4);
+        int lineH = sp(20);
+        int gapSmall = sp(8);
+        int gapMed = sp(12);
+        int gapLarge = sp(14);
+        int tickH = sp(4);
+        int cardH = pad * 2 + titleLines.size() * lineH + gapSmall + lineH + gapMed + lineH + gapLarge
+                + lineH + 4 * (lineH - tickH);
 
-        g.setColor(new Color(20, 8, 18, 190));
-        g.fillRoundRect(cardX, cardY, cardW, cardH, 14, 14);
-        g.setColor(new Color(255, 255, 255, 35));
-        g.drawRoundRect(cardX, cardY, cardW, cardH, 14, 14);
+        int opacityPct = settings.sideInfoPanelOpacityPercent();
+        int bgAlpha = Math.max(0, Math.min(255, Math.round(255 * opacityPct / 100f)));
+        int borderAlpha = Math.max(0, bgAlpha / 5);
+        g.setColor(new Color(20, 8, 18, bgAlpha));
+        g.fillRoundRect(cardX, cardY, cardW, cardH, corner, corner);
+        g.setColor(new Color(255, 255, 255, borderAlpha));
+        g.drawRoundRect(cardX, cardY, cardW, cardH, corner, corner);
 
         int tx = cardX + pad;
         int ty = cardY + pad + titleFm.getAscent();
@@ -1077,35 +1092,45 @@ public final class RhythmPanel extends JPanel {
             g.drawString(line, tx, ty);
             ty += lineH;
         }
-        ty += 8;
+        ty += gapSmall;
 
-        g.setFont(g.getFont().deriveFont(Font.PLAIN, 12f));
+        g.setFont(g.getFont().deriveFont(Font.PLAIN, sf(12f)));
         g.setColor(new Color(200, 190, 200));
         g.drawString(Lang.t(settings, "hub.difficulty") + " " + difficultyLabel(), tx, ty);
-        ty += lineH + 12;
+        ty += lineH + gapMed;
 
         long elapsed = Math.max(0, Math.min(chart.lengthMs, nowMs()));
         long remaining = Math.max(0, chart.lengthMs - elapsed);
         g.setColor(Color.WHITE);
         g.drawString(formatTime(elapsed) + " / " + formatTime(chart.lengthMs), tx, ty);
-        ty += lineH - 4;
+        ty += lineH - tickH;
         g.setColor(new Color(160, 150, 160));
-        g.setFont(g.getFont().deriveFont(Font.PLAIN, 11f));
+        g.setFont(g.getFont().deriveFont(Font.PLAIN, sf(11f)));
         g.drawString("-" + formatTime(remaining), tx, ty);
-        ty += lineH + 14;
+        ty += lineH + gapLarge;
 
-        g.setFont(g.getFont().deriveFont(Font.BOLD, 12f));
+        g.setFont(g.getFont().deriveFont(Font.BOLD, sf(12f)));
         g.setColor(new Color(255, 45, 138));
         g.drawString("PERFECT " + perfects, tx, ty);
-        ty += lineH - 4;
+        ty += lineH - tickH;
         g.setColor(new Color(190, 140, 230));
         g.drawString("GREAT " + greats, tx, ty);
-        ty += lineH - 4;
+        ty += lineH - tickH;
         g.setColor(new Color(255, 180, 210));
         g.drawString("GOOD " + goods, tx, ty);
-        ty += lineH - 4;
+        ty += lineH - tickH;
         g.setColor(Color.LIGHT_GRAY);
         g.drawString("BREAK " + misses, tx, ty);
+    }
+
+    /** Scales a design-time pixel size by {@link #renderScale} — see {@link #paintSideInfoPanel}. */
+    private int sp(int baseSize) {
+        return (int) Math.round(baseSize * renderScale);
+    }
+
+    /** Scales a design-time font point size by {@link #renderScale} — see {@link #paintSideInfoPanel}. */
+    private float sf(float baseSize) {
+        return (float) (baseSize * renderScale);
     }
 
     private String difficultyLabel() {

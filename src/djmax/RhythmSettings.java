@@ -387,6 +387,17 @@ final class RhythmSettings {
         prefs.set("side_info_panel_enabled", on);
     }
 
+    /** How opaque the side info card's background/border are, 0 (invisible) to 100 (solid) —
+     *  independent of whether it's shown at all ({@link #sideInfoPanelEnabled()}). Default 75
+     *  matches the card's original fixed alpha (190/255). */
+    int sideInfoPanelOpacityPercent() {
+        return Math.max(0, Math.min(100, prefs.getInt("side_info_panel_opacity_pct", 75)));
+    }
+
+    void setSideInfoPanelOpacityPercent(int percent) {
+        prefs.set("side_info_panel_opacity_pct", Math.max(0, Math.min(100, percent)));
+    }
+
     int fpsLimit() {
         int v = prefs.getInt("fps_limit", 60);
         return switch (v) {
@@ -504,6 +515,7 @@ final class RhythmSettings {
         setNoteStyle(NoteStyle.RING);
         setAntiAliasing(true);
         setSideInfoPanelEnabled(true);
+        setSideInfoPanelOpacityPercent(75);
         setFpsLimit(60);
         setColorVision(ColorVision.NORMAL);
         setLanguage(Lang.KO);
