@@ -1,6 +1,5 @@
 package djmax;
 
-import com.group_finity.mascot.lumi.plugin.PluginContext;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -87,7 +86,7 @@ final class HubPanel extends JPanel {
     private static final int THUMB_SIZE_SELECTED = 68;
     private static final int ROW_HEIGHT = 80;
 
-    private final PluginContext ctx;
+    private final GameHost ctx;
     private final SongLibrary library;
     private final RhythmSettings settings;
     private final HubWindow hubWindow;
@@ -139,7 +138,7 @@ final class HubPanel extends JPanel {
     // a different, merely-equal-looking one, leaking the original forever.
     private final Runnable rowHeightListener = this::applyRowHeight;
 
-    HubPanel(PluginContext ctx, RhythmSettings settings, HubWindow hubWindow) {
+    HubPanel(GameHost ctx, RhythmSettings settings, HubWindow hubWindow) {
         this.ctx = ctx;
         this.library = new SongLibrary(ctx.dataDir().resolve("library"));
         this.settings = settings;
@@ -1223,7 +1222,7 @@ final class HubPanel extends JPanel {
                         + (practiceRun ? " (연습)" : "") + (autoRun ? " (퍼펙트 오토)" : ""));
                 if (scoringRun && res.cleared()) {
                     int xp = rhythmXpFor(res);
-                    ctx.awardAffection("rhythm", xp); // Niah's own app-wide affection — untouched
+                    ctx.awardBonus("rhythm", xp); // Niah's own app-wide affection — untouched (no-op standalone)
                     settings.addRhythmXp(xp); // this mod's own local rhythm level
                 }
                 // RhythmPanel itself records the best score (it has the "new best?" check needed

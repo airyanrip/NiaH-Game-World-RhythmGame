@@ -1,0 +1,29 @@
+Niah (니아) — Character Attribution / 출처 표기
+========================================
+
+Niah and all related names, lore, world and original designs are the
+intellectual property of Nimble Neuron Corporation, from the game
+"Eternal Return" (이터널 리턴).
+
+이 프로젝트에 포함된 니아(Niah) 캐릭터의 SD 이미지·설정은 Nimble Neuron의
+공식 팬킷(Fankit) 자료를 참고하여 새로 창작한 2차 창작물이며, 원본
+스플래시 아트·스킬 아이콘·성우 음성 파일 등 팬킷 원본 콘텐츠를 그대로
+복제·재배포하지 않습니다.
+
+본 프로젝트는 아래 정책을 따릅니다:
+  Nimble Neuron IP Usage Policy (Effective August 7/14, 2025)
+  https://support.playeternalreturn.com/hc/ko/articles/49503976113177
+
+이 프로젝트는 무료로 배포되며, 상업적 판매나 유료 접근 뒤에 두지 않습니다.
+Nia ⓒ Nimble Neuron Corporation. All rights to the original character
+and the Eternal Return IP remain with Nimble Neuron Corporation.
+
+이 프로젝트 자체(구성·코드·새로 그린 SD 이미지)의 제작자: 량립
+
+--------------------------------------------------------
+
+This project ships in two forms — a Little LUMI Model (STUDIO LUMI) plugin
+and a standalone Java build that needs no host app at all. Little LUMI's
+own character (Lumi) and its assets are unrelated to this notice and are
+not included in this repository — see the base app's own CREDITS.txt for
+that, if you're running the plugin form inside Little LUMI.
