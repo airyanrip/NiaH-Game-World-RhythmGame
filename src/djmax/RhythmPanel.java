@@ -1629,14 +1629,11 @@ public final class RhythmPanel extends JPanel {
                 // Arcade Drop long notes get their own head glyph — see paintArcadeHoldHead's doc —
                 // instead of the plain tap-note ring: approachT drives the "converging onto the
                 // center hole" indicator while still approaching (0 once actually held, since by
-                // then the head press has already landed), spinAngle drives the arrows spinning
-                // back and forth only while actually being held.
+                // then the head press has already landed), spinAngle drives the arrows turning
+                // clockwise in 90-degree steps only while actually being held.
                 double approachT = holding ? 0.0
                         : Math.max(0.0, Math.min(1.0, (n.timeMs - now) / (double) ARCADE_APPROACH_MS));
-                double spinAngle = holding
-                        ? ARCADE_SPIN_AMPLITUDE_RAD * Math.sin(
-                                2 * Math.PI * (now - n.timeMs) / (double) ARCADE_SPIN_PERIOD_MS)
-                        : 0.0;
+                double spinAngle = holding ? arcadeSpinAngle(now - n.timeMs) : 0.0;
                 paintArcadeHoldHead(g, cx, (int) Math.round(headY), ARCADE_HOLD_OUTER_RADIUS,
                         laneColor(n.lane), approachT, spinAngle, holding);
             }
@@ -1726,13 +1723,28 @@ public final class RhythmPanel extends JPanel {
     // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
     // press is, this is purely a visual countdown), so it can be tuned independently.
     private static final long ARCADE_APPROACH_MS = 700;
-    // sin() gives a continuous spin-decelerate-stop-reverse-accelerate cycle for free: velocity
-    // (the derivative of amplitude*sin(2*pi*t/period)) peaks at the zero-crossings (fastest spin)
-    // and hits zero at the peaks (momentarily stops) — exactly "빠르게 돌아가다 다시 멈추고 반대
-    // 방향으로" without needing an explicit phase state machine. The arrow glyph itself has 4-fold
-    // rotational symmetry, so a swing past 90 degrees already reads as a full extra spin.
-    private static final double ARCADE_SPIN_AMPLITUDE_RAD = Math.PI * 1.3;
-    private static final long ARCADE_SPIN_PERIOD_MS = 900;
+    // One-directional, always clockwise: ease-out through a 90-degree turn, pause, then the next
+    // 90-degree turn — never reversing. The arrow glyph has 4-fold rotational symmetry, so landing
+    // on exactly 90 degrees looks identical to resting at 0, which is what makes each stop-and-go
+    // read as a clean repeating step instead of a visible snap back.
+    private static final double ARCADE_SPIN_STEP_RAD = Math.PI / 2;
+    private static final long ARCADE_SPIN_ROTATE_MS = 650;
+    private static final long ARCADE_SPIN_PAUSE_MS = 260;
+
+    /** The arrows' rotation while a hold is actually being pressed: clockwise-only, in eased
+     *  90-degree steps with a brief pause at each stop (see {@link #ARCADE_SPIN_STEP_RAD}), rather
+     *  than a continuous spin — {@code elapsedMs} is any monotonically increasing time base (this
+     *  note's own held duration is enough, it doesn't need to start at exactly 0). */
+    private static double arcadeSpinAngle(long elapsedMs) {
+        long cycleMs = ARCADE_SPIN_ROTATE_MS + ARCADE_SPIN_PAUSE_MS;
+        long phase = Math.floorMod(elapsedMs, cycleMs);
+        if (phase >= ARCADE_SPIN_ROTATE_MS) {
+            return ARCADE_SPIN_STEP_RAD; // paused at the 90-degree mark
+        }
+        double t = phase / (double) ARCADE_SPIN_ROTATE_MS;
+        double eased = 1 - Math.pow(1 - t, 3); // ease-out cubic: fast start, slows into the stop
+        return ARCADE_SPIN_STEP_RAD * eased;
+    }
 
     /** One chubby arrow in local unit coordinates (-1..1), tip toward the origin (center) and a
      *  short, wide tail near the rim, at the "top" (12 o'clock) position — unioning 3 more copies
