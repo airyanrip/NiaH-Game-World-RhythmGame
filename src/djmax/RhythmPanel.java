@@ -1717,7 +1717,11 @@ public final class RhythmPanel extends JPanel {
     // PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to a
     // stop, then reversing (see paintArcadeHoldHead). Only a little bigger than the tap note's own
     // ring, not a dramatically larger disc — comfortably inside a 120px lane either way.
-    private static final int ARCADE_HOLD_OUTER_RADIUS = 40;
+    private static final int ARCADE_HOLD_OUTER_RADIUS = 33;
+    // The arrows themselves render at this fraction of the disc, not edge-to-edge — leaving a
+    // visible margin between the arrow tails and the outer rim is what actually reads as "smaller
+    // arrows," separate from (and in addition to) shrinking the disc itself.
+    private static final double ARCADE_HOLD_ARROW_SCALE = 0.76;
     // How long before the head's hit time the approach indicator starts visibly closing in — not
     // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
     // press is, this is purely a visual countdown), so it can be tuned independently.
@@ -1780,7 +1784,7 @@ public final class RhythmPanel extends JPanel {
         paintGlow(g, cx - outerR, cy - outerR, d, d, d, base, holding ? 1f : 0.8f);
 
         Ellipse2D outerEllipse = new Ellipse2D.Double(cx - outerR, cy - outerR, d, d);
-        double centerHoleR = outerR * 0.20;
+        double centerHoleR = outerR * 0.15;
         Ellipse2D centerHole = new Ellipse2D.Double(cx - centerHoleR, cy - centerHoleR, centerHoleR * 2, centerHoleR * 2);
 
         // A dark "floor" disc, not a bright one — the reference photo's own asphalt-gray ground —
@@ -1795,7 +1799,7 @@ public final class RhythmPanel extends JPanel {
 
         java.awt.geom.AffineTransform t = java.awt.geom.AffineTransform.getTranslateInstance(cx, cy);
         t.rotate(spinAngleRad);
-        t.scale(outerR, outerR);
+        t.scale(outerR * ARCADE_HOLD_ARROW_SCALE, outerR * ARCADE_HOLD_ARROW_SCALE);
         Shape arrows = t.createTransformedShape(ARCADE_HOLD_ARROW_GLYPH);
 
         // Translucent magenta/pink fill — the disc underneath shows faintly through it — with a
@@ -1819,7 +1823,7 @@ public final class RhythmPanel extends JPanel {
         g.setColor(NOTE_HOLE_BG);
         g.fill(centerHole);
 
-        double approachR = centerHoleR + (outerR * 0.27 - centerHoleR) * approachT;
+        double approachR = centerHoleR + (outerR * 0.20 - centerHoleR) * approachT;
         int glowAlpha = (int) Math.round(255 - 190 * approachT);
         g.setColor(withAlpha(Color.WHITE, glowAlpha));
         g.fill(new Ellipse2D.Double(cx - approachR, cy - approachR, approachR * 2, approachR * 2));
