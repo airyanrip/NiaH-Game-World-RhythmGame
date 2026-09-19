@@ -1717,23 +1717,30 @@ public final class RhythmPanel extends JPanel {
     /** One chubby arrow in local unit coordinates (-1..1), tip toward the origin (center) and a
      *  short, wide tail near the rim, at the "top" (12 o'clock) position — unioning 3 more copies
      *  rotated 90/180/270 degrees gives all 4 (12/3/6/9 o'clock), each pointing straight in at the
-     *  center. Built as a sharp-cornered pentagon (short flat tail, wide flared shoulders, a
-     *  blunt-ish tip) and then rounded off by stroking that outline with a round-joined stroke and
+     *  center. Built as two clearly distinct sharp-cornered pieces — a short constant-width tail
+     *  segment, then a sudden outward flare into a much wider triangular head — rather than one
+     *  smooth taper from tail to tip: a single continuous taper (the previous attempt) reads as
+     *  just one triangle with no visible tail at all, which is exactly what "화살표가 머리 부분만
+     *  보입니다" was pointing out. The flare/shoulder step is what actually makes it read as an
+     *  arrow. Rounded off afterward by stroking that outline with a round-joined stroke and
      *  unioning the stroke shape back onto the fill — Java2D has no direct "rounded polygon"
-     *  primitive, so inflating a sharp shape with a round stroke is the standard way to soften every
-     *  corner (tail corners, shoulders, tip alike) in one pass instead of hand-rounding each one. */
+     *  primitive, so inflating a sharp shape with a round stroke (which softens reflex/concave
+     *  corners, like the shoulder notch here, into a curved flare too, not just convex ones) is the
+     *  standard way to round every corner in one pass instead of hand-rounding each one. */
     private static final Area ARCADE_HOLD_ARROW_GLYPH = buildArcadeHoldArrowGlyph();
 
     private static Area buildArcadeHoldArrowGlyph() {
         Path2D.Double sharp = new Path2D.Double();
-        sharp.moveTo(-0.18, -0.95);  // tail, back-left  — short, wide tail
-        sharp.lineTo(0.18, -0.95);   // tail, back-right
-        sharp.lineTo(0.40, -0.72);   // shoulder, right  — flares wider than the tail
-        sharp.lineTo(0, -0.30);      // tip, toward the center (blunt before rounding)
-        sharp.lineTo(-0.40, -0.72);  // shoulder, left
+        sharp.moveTo(-0.20, -0.95);  // tail, back-left       — short, constant-width tail
+        sharp.lineTo(0.20, -0.95);   // tail, back-right
+        sharp.lineTo(0.20, -0.66);   // tail, front-right     — straight up, same width as the back
+        sharp.lineTo(0.42, -0.66);   // shoulder, right       — sudden flare, wider than the tail
+        sharp.lineTo(0, -0.28);      // tip, toward the center (blunt before rounding)
+        sharp.lineTo(-0.42, -0.66);  // shoulder, left
+        sharp.lineTo(-0.20, -0.66);  // tail, front-left
         sharp.closePath();
 
-        BasicStroke roundJoin = new BasicStroke(0.09f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        BasicStroke roundJoin = new BasicStroke(0.11f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         Area arrow = new Area(sharp);
         arrow.add(new Area(roundJoin.createStrokedShape(sharp)));
 
