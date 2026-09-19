@@ -1607,7 +1607,23 @@ public final class RhythmPanel extends JPanel {
         paintHoldBar(g, x, (int) top, barWidth, Math.max(6, (int) (bottom - top)), 12, laneColor(n.lane), holding);
 
         if (!n.judged || holding) {
-            paintNote(g, n, headY); // head cap — still the "press here" target, or pinned while held
+            if (classic) {
+                paintNote(g, n, headY); // head cap — still the "press here" target, or pinned while held
+            } else {
+                // Arcade Drop long notes get their own head glyph — see paintArcadeHoldHead's doc —
+                // instead of the plain tap-note ring: approachT drives the "converging onto the
+                // center hole" indicator while still approaching (0 once actually held, since by
+                // then the head press has already landed), spinAngle drives the arrows spinning
+                // back and forth only while actually being held.
+                double approachT = holding ? 0.0
+                        : Math.max(0.0, Math.min(1.0, (n.timeMs - now) / (double) ARCADE_APPROACH_MS));
+                double spinAngle = holding
+                        ? ARCADE_SPIN_AMPLITUDE_RAD * Math.sin(
+                                2 * Math.PI * (now - n.timeMs) / (double) ARCADE_SPIN_PERIOD_MS)
+                        : 0.0;
+                paintArcadeHoldHead(g, cx, (int) Math.round(headY), ARCADE_HOLD_OUTER_RADIUS,
+                        laneColor(n.lane), approachT, spinAngle, holding);
+            }
         }
     }
 
@@ -1678,6 +1694,97 @@ public final class RhythmPanel extends JPanel {
     // cross shape) — both kept together, not one replacing the other. Radius chosen to sit
     // comfortably inside a 120px lane with margin either side.
     private static final int NOTE_CROSS_OUTER_RADIUS = 42;
+
+    // Arcade Drop long-note head — a separate, bigger glyph from the tap note's cross ring (per the
+    // user's own reference photo): a wide disc with 4 arrows pointing in from N/E/S/W toward a
+    // small center hole, an "approach" indicator collapsing into that hole timed to land exactly on
+    // a PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to
+    // a stop, then reversing (see paintArcadeHoldHead). Still comfortably inside a 120px lane.
+    private static final int ARCADE_HOLD_OUTER_RADIUS = 54;
+    // How long before the head's hit time the approach indicator starts visibly closing in — not
+    // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
+    // press is, this is purely a visual countdown), so it can be tuned independently.
+    private static final long ARCADE_APPROACH_MS = 700;
+    // sin() gives a continuous spin-decelerate-stop-reverse-accelerate cycle for free: velocity
+    // (the derivative of amplitude*sin(2*pi*t/period)) peaks at the zero-crossings (fastest spin)
+    // and hits zero at the peaks (momentarily stops) — exactly "빠르게 돌아가다 다시 멈추고 반대
+    // 방향으로" without needing an explicit phase state machine. The arrow glyph itself has 4-fold
+    // rotational symmetry, so a swing past 90 degrees already reads as a full extra spin.
+    private static final double ARCADE_SPIN_AMPLITUDE_RAD = Math.PI * 1.3;
+    private static final long ARCADE_SPIN_PERIOD_MS = 900;
+
+    /** One arrow in local unit coordinates (-1..1), apex toward the origin (center) and base near
+     *  the rim, at the "top" (12 o'clock) position — unioning 3 more copies rotated 90/180/270
+     *  degrees gives all 4 (12/3/6/9 o'clock), each pointing straight in at the center, with visible
+     *  gaps between them (each arrow only spans a narrow wedge) matching the reference photo. */
+    private static final Area ARCADE_HOLD_ARROW_GLYPH = buildArcadeHoldArrowGlyph();
+
+    private static Area buildArcadeHoldArrowGlyph() {
+        Path2D.Double arrow = new Path2D.Double();
+        arrow.moveTo(0, -0.30);
+        arrow.lineTo(-0.26, -0.90);
+        arrow.lineTo(0.26, -0.90);
+        arrow.closePath();
+        Area glyph = new Area(arrow);
+        for (int i = 1; i < 4; i++) {
+            glyph.add(new Area(java.awt.geom.AffineTransform.getRotateInstance(i * Math.PI / 2)
+                    .createTransformedShape(arrow)));
+        }
+        return glyph;
+    }
+
+    /** The Arcade Drop hold note's head glyph. {@code approachT} is 1 while the note is still far
+     *  off approaching (the bright indicator sits out near the arrow tips) down to 0 exactly at a
+     *  PERFECT hit (it has fully collapsed onto — and lit up — the center hole); pass 0 once
+     *  actually holding, since the head press has already landed by then. {@code spinAngleRad}
+     *  rotates the 4 arrows (0 = resting, matching the tap note's own static cross) — only
+     *  non-zero while actually being held. */
+    private static void paintArcadeHoldHead(Graphics2D g, int cx, int cy, int outerR, Color base,
+            double approachT, double spinAngleRad, boolean holding) {
+        int d = outerR * 2;
+        paintGlow(g, cx - outerR, cy - outerR, d, d, d, base, holding ? 1f : 0.8f);
+
+        Ellipse2D outerEllipse = new Ellipse2D.Double(cx - outerR, cy - outerR, d, d);
+        double centerHoleR = outerR * 0.16;
+        Ellipse2D centerHole = new Ellipse2D.Double(cx - centerHoleR, cy - centerHoleR, centerHoleR * 2, centerHoleR * 2);
+
+        Paint old = g.getPaint();
+        g.setPaint(new RadialGradientPaint(new Point2D.Float(cx, cy), (float) outerR,
+                new float[]{0f, 0.7f, 1f},
+                new Color[]{brighten(base, 0.5f), base, base.darker()}));
+        g.fill(outerEllipse);
+        g.setPaint(old);
+
+        java.awt.geom.AffineTransform t = java.awt.geom.AffineTransform.getTranslateInstance(cx, cy);
+        t.rotate(spinAngleRad);
+        t.scale(outerR, outerR);
+        Shape arrows = t.createTransformedShape(ARCADE_HOLD_ARROW_GLYPH);
+        g.setColor(withAlpha(Color.WHITE, holding ? 235 : 190));
+        g.fill(arrows);
+        g.setColor(base.darker().darker());
+        g.setStroke(new BasicStroke(1.3f));
+        g.draw(arrows);
+
+        // Center hole (dark), then the approach indicator drawn on top of it, shrinking from out
+        // near the arrow tips down onto exactly this hole's size and brightening as it closes in —
+        // so the hole itself visibly lights up the instant it lands (a PERFECT hit), rather than
+        // the hole just re-covering it back up.
+        g.setColor(NOTE_HOLE_BG);
+        g.fill(centerHole);
+
+        double approachR = centerHoleR + (outerR * 0.30 - centerHoleR) * approachT;
+        int glowAlpha = (int) Math.round(255 - 140 * approachT);
+        g.setColor(withAlpha(Color.WHITE, glowAlpha));
+        g.fill(new Ellipse2D.Double(cx - approachR, cy - approachR, approachR * 2, approachR * 2));
+
+        g.setColor(withAlpha(Color.WHITE, 170));
+        g.setStroke(new BasicStroke(1.2f));
+        g.draw(centerHole);
+
+        g.setColor(withAlpha(Color.WHITE, 140));
+        g.setStroke(new BasicStroke(1.8f));
+        g.draw(outerEllipse);
+    }
 
     /** The inner cross glyph, in local unit coordinates (-1..1) — built exactly the way the
      *  reference icon reads: a plus/cross silhouette (a vertical bar unioned with a horizontal bar)
