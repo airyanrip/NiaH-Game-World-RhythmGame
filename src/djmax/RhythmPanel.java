@@ -1695,12 +1695,13 @@ public final class RhythmPanel extends JPanel {
     // comfortably inside a 120px lane with margin either side.
     private static final int NOTE_CROSS_OUTER_RADIUS = 42;
 
-    // Arcade Drop long-note head — a separate, bigger glyph from the tap note's cross ring (per the
-    // user's own reference photo): a wide disc with 4 arrows pointing in from N/E/S/W toward a
-    // small center hole, an "approach" indicator collapsing into that hole timed to land exactly on
-    // a PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to
-    // a stop, then reversing (see paintArcadeHoldHead). Still comfortably inside a 120px lane.
-    private static final int ARCADE_HOLD_OUTER_RADIUS = 54;
+    // Arcade Drop long-note head — a separate glyph from the tap note's cross ring (per the user's
+    // own reference photo): a disc with 4 chubby arrows pointing in from N/E/S/W toward a small
+    // center hole, an "approach" indicator collapsing into that hole timed to land exactly on a
+    // PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to a
+    // stop, then reversing (see paintArcadeHoldHead). Only a little bigger than the tap note's own
+    // ring, not a dramatically larger disc — comfortably inside a 120px lane either way.
+    private static final int ARCADE_HOLD_OUTER_RADIUS = 46;
     // How long before the head's hit time the approach indicator starts visibly closing in — not
     // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
     // press is, this is purely a visual countdown), so it can be tuned independently.
@@ -1713,18 +1714,29 @@ public final class RhythmPanel extends JPanel {
     private static final double ARCADE_SPIN_AMPLITUDE_RAD = Math.PI * 1.3;
     private static final long ARCADE_SPIN_PERIOD_MS = 900;
 
-    /** One arrow in local unit coordinates (-1..1), apex toward the origin (center) and base near
-     *  the rim, at the "top" (12 o'clock) position — unioning 3 more copies rotated 90/180/270
-     *  degrees gives all 4 (12/3/6/9 o'clock), each pointing straight in at the center, with visible
-     *  gaps between them (each arrow only spans a narrow wedge) matching the reference photo. */
+    /** One chubby arrow in local unit coordinates (-1..1), tip toward the origin (center) and a
+     *  short, wide tail near the rim, at the "top" (12 o'clock) position — unioning 3 more copies
+     *  rotated 90/180/270 degrees gives all 4 (12/3/6/9 o'clock), each pointing straight in at the
+     *  center. Built as a sharp-cornered pentagon (short flat tail, wide flared shoulders, a
+     *  blunt-ish tip) and then rounded off by stroking that outline with a round-joined stroke and
+     *  unioning the stroke shape back onto the fill — Java2D has no direct "rounded polygon"
+     *  primitive, so inflating a sharp shape with a round stroke is the standard way to soften every
+     *  corner (tail corners, shoulders, tip alike) in one pass instead of hand-rounding each one. */
     private static final Area ARCADE_HOLD_ARROW_GLYPH = buildArcadeHoldArrowGlyph();
 
     private static Area buildArcadeHoldArrowGlyph() {
-        Path2D.Double arrow = new Path2D.Double();
-        arrow.moveTo(0, -0.30);
-        arrow.lineTo(-0.26, -0.90);
-        arrow.lineTo(0.26, -0.90);
-        arrow.closePath();
+        Path2D.Double sharp = new Path2D.Double();
+        sharp.moveTo(-0.18, -0.95);  // tail, back-left  — short, wide tail
+        sharp.lineTo(0.18, -0.95);   // tail, back-right
+        sharp.lineTo(0.40, -0.72);   // shoulder, right  — flares wider than the tail
+        sharp.lineTo(0, -0.30);      // tip, toward the center (blunt before rounding)
+        sharp.lineTo(-0.40, -0.72);  // shoulder, left
+        sharp.closePath();
+
+        BasicStroke roundJoin = new BasicStroke(0.09f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        Area arrow = new Area(sharp);
+        arrow.add(new Area(roundJoin.createStrokedShape(sharp)));
+
         Area glyph = new Area(arrow);
         for (int i = 1; i < 4; i++) {
             glyph.add(new Area(java.awt.geom.AffineTransform.getRotateInstance(i * Math.PI / 2)
@@ -1745,13 +1757,16 @@ public final class RhythmPanel extends JPanel {
         paintGlow(g, cx - outerR, cy - outerR, d, d, d, base, holding ? 1f : 0.8f);
 
         Ellipse2D outerEllipse = new Ellipse2D.Double(cx - outerR, cy - outerR, d, d);
-        double centerHoleR = outerR * 0.16;
+        double centerHoleR = outerR * 0.20;
         Ellipse2D centerHole = new Ellipse2D.Double(cx - centerHoleR, cy - centerHoleR, centerHoleR * 2, centerHoleR * 2);
 
+        // A dark "floor" disc, not a bright one — the reference photo's own asphalt-gray ground —
+        // so the pink arrows read as the one clearly lit thing on it instead of blending into a
+        // similarly-bright, similarly-colored background.
         Paint old = g.getPaint();
         g.setPaint(new RadialGradientPaint(new Point2D.Float(cx, cy), (float) outerR,
-                new float[]{0f, 0.7f, 1f},
-                new Color[]{brighten(base, 0.5f), base, base.darker()}));
+                new float[]{0f, 1f},
+                new Color[]{NOTE_HOLE_BG.brighter(), NOTE_HOLE_BG.darker()}));
         g.fill(outerEllipse);
         g.setPaint(old);
 
@@ -1759,21 +1774,30 @@ public final class RhythmPanel extends JPanel {
         t.rotate(spinAngleRad);
         t.scale(outerR, outerR);
         Shape arrows = t.createTransformedShape(ARCADE_HOLD_ARROW_GLYPH);
-        g.setColor(withAlpha(Color.WHITE, holding ? 235 : 190));
+
+        // Translucent magenta/pink fill — the disc underneath shows faintly through it — with a
+        // bright pink glowing rim: a soft wide band first, then a crisp bright core stroke on top,
+        // same layered-glow idea as paintGlow but traced along the arrow outline itself rather than
+        // a rounded-rect halo. "바닥이 투영되어 보이는 반투명 그래픽 + 밝은 분홍빛 발광 윤곽선".
+        Color glowEdge = new Color(255, 140, 235);
+        g.setColor(withAlpha(glowEdge, holding ? 90 : 60));
+        g.setStroke(new BasicStroke(outerR * 0.16f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.draw(arrows);
+        g.setColor(withAlpha(brighten(base, 0.3f), holding ? 195 : 150));
         g.fill(arrows);
-        g.setColor(base.darker().darker());
-        g.setStroke(new BasicStroke(1.3f));
+        g.setColor(withAlpha(glowEdge, holding ? 240 : 205));
+        g.setStroke(new BasicStroke(outerR * 0.05f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.draw(arrows);
 
-        // Center hole (dark), then the approach indicator drawn on top of it, shrinking from out
-        // near the arrow tips down onto exactly this hole's size and brightening as it closes in —
-        // so the hole itself visibly lights up the instant it lands (a PERFECT hit), rather than
-        // the hole just re-covering it back up.
+        // Center hole (dark), then the approach indicator drawn on top of it, shrinking from just
+        // inside the arrow tips down onto exactly this hole's size and brightening sharply as it
+        // closes in — so the hole itself visibly lights up the instant it lands (a PERFECT hit),
+        // rather than the hole just re-covering it back up.
         g.setColor(NOTE_HOLE_BG);
         g.fill(centerHole);
 
-        double approachR = centerHoleR + (outerR * 0.30 - centerHoleR) * approachT;
-        int glowAlpha = (int) Math.round(255 - 140 * approachT);
+        double approachR = centerHoleR + (outerR * 0.27 - centerHoleR) * approachT;
+        int glowAlpha = (int) Math.round(255 - 190 * approachT);
         g.setColor(withAlpha(Color.WHITE, glowAlpha));
         g.fill(new Ellipse2D.Double(cx - approachR, cy - approachR, approachR * 2, approachR * 2));
 
@@ -1781,8 +1805,8 @@ public final class RhythmPanel extends JPanel {
         g.setStroke(new BasicStroke(1.2f));
         g.draw(centerHole);
 
-        g.setColor(withAlpha(Color.WHITE, 140));
-        g.setStroke(new BasicStroke(1.8f));
+        g.setColor(withAlpha(new Color(255, 140, 235), 220));
+        g.setStroke(new BasicStroke(2f));
         g.draw(outerEllipse);
     }
 
