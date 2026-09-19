@@ -1719,6 +1719,8 @@ public final class RhythmPanel extends JPanel {
     // visible margin between the arrow tails and the outer rim is what actually reads as "smaller
     // arrows," separate from (and in addition to) shrinking the disc itself.
     private static final double ARCADE_HOLD_ARROW_SCALE = 0.76;
+    // The center hole/approach-indicator color — purple, not white, per draft PNG review.
+    private static final Color ARCADE_CENTER_COLOR = new Color(190, 90, 255);
     // How long before the head's hit time the approach indicator starts visibly closing in — not
     // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
     // press is, this is purely a visual countdown), so it can be tuned independently.
@@ -1761,15 +1763,26 @@ public final class RhythmPanel extends JPanel {
      *  standard way to round every corner in one pass instead of hand-rounding each one. */
     private static final Area ARCADE_HOLD_ARROW_GLYPH = buildArcadeHoldArrowGlyph();
 
+    // Triangle (head) : bar (tail) vertical-length ratio, approved via draft PNG review — the tip
+    // is pulled back from -0.28 to -0.34 for a visible gap from the center hole, and the
+    // shoulder/tail-front boundary is derived from that so the head is 65% and the tail 35% of the
+    // resulting tip-to-tail-back span (was an even-ish split before, which read as "no visible
+    // tail" — see buildArcadeHoldArrowGlyph's own doc).
+    private static final double ARCADE_ARROW_TIP_Y = -0.34;
+    private static final double ARCADE_ARROW_TAIL_BACK_Y = -0.95;
+    private static final double ARCADE_ARROW_HEAD_FRACTION = 0.65;
+
     private static Area buildArcadeHoldArrowGlyph() {
+        double span = ARCADE_ARROW_TAIL_BACK_Y - ARCADE_ARROW_TIP_Y; // negative
+        double shoulderY = ARCADE_ARROW_TIP_Y + span * ARCADE_ARROW_HEAD_FRACTION;
         Path2D.Double sharp = new Path2D.Double();
-        sharp.moveTo(-0.20, -0.95);  // tail, back-left       — short, constant-width tail
-        sharp.lineTo(0.20, -0.95);   // tail, back-right
-        sharp.lineTo(0.20, -0.66);   // tail, front-right     — straight up, same width as the back
-        sharp.lineTo(0.42, -0.66);   // shoulder, right       — sudden flare, wider than the tail
-        sharp.lineTo(0, -0.28);      // tip, toward the center (blunt before rounding)
-        sharp.lineTo(-0.42, -0.66);  // shoulder, left
-        sharp.lineTo(-0.20, -0.66);  // tail, front-left
+        sharp.moveTo(-0.20, ARCADE_ARROW_TAIL_BACK_Y);  // tail, back-left  — short, constant-width tail
+        sharp.lineTo(0.20, ARCADE_ARROW_TAIL_BACK_Y);   // tail, back-right
+        sharp.lineTo(0.20, shoulderY);   // tail, front-right     — straight up, same width as the back
+        sharp.lineTo(0.42, shoulderY);   // shoulder, right       — sudden flare, wider than the tail
+        sharp.lineTo(0, ARCADE_ARROW_TIP_Y);  // tip, toward the center (blunt before rounding, gap from the hole)
+        sharp.lineTo(-0.42, shoulderY);  // shoulder, left
+        sharp.lineTo(-0.20, shoulderY);  // tail, front-left
         sharp.closePath();
 
         BasicStroke roundJoin = new BasicStroke(0.11f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
@@ -1837,16 +1850,25 @@ public final class RhythmPanel extends JPanel {
 
         double approachR = centerHoleR + (outerR * 0.20 - centerHoleR) * approachT;
         int glowAlpha = (int) Math.round(255 - 190 * approachT);
-        g.setColor(withAlpha(Color.WHITE, glowAlpha));
+        g.setColor(withAlpha(ARCADE_CENTER_COLOR, glowAlpha));
         g.fill(new Ellipse2D.Double(cx - approachR, cy - approachR, approachR * 2, approachR * 2));
 
-        g.setColor(withAlpha(Color.WHITE, 170));
+        g.setColor(withAlpha(ARCADE_CENTER_COLOR, 200));
         g.setStroke(new BasicStroke(1.2f));
         g.draw(centerHole);
 
-        g.setColor(withAlpha(new Color(255, 140, 235), 220));
+        Color rimColor = new Color(255, 140, 235);
+        g.setColor(withAlpha(rimColor, 220));
         g.setStroke(new BasicStroke(2f));
         g.draw(outerEllipse);
+
+        // A second, thinner, dimmer ring just inside the main rim — approved via draft PNG review.
+        double innerBorderR = outerR - 4;
+        Ellipse2D innerBorder = new Ellipse2D.Double(cx - innerBorderR, cy - innerBorderR,
+                innerBorderR * 2, innerBorderR * 2);
+        g.setColor(withAlpha(rimColor, 120));
+        g.setStroke(new BasicStroke(1f));
+        g.draw(innerBorder);
     }
 
     /** The inner cross glyph, in local unit coordinates (-1..1) — built exactly the way the
