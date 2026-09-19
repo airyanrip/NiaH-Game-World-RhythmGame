@@ -1717,7 +1717,7 @@ public final class RhythmPanel extends JPanel {
     // PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to a
     // stop, then reversing (see paintArcadeHoldHead). Only a little bigger than the tap note's own
     // ring, not a dramatically larger disc — comfortably inside a 120px lane either way.
-    private static final int ARCADE_HOLD_OUTER_RADIUS = 33;
+    private static final int ARCADE_HOLD_OUTER_RADIUS = 44;
     // The arrows themselves render at this fraction of the disc, not edge-to-edge — leaving a
     // visible margin between the arrow tails and the outer rim is what actually reads as "smaller
     // arrows," separate from (and in addition to) shrinking the disc itself.
