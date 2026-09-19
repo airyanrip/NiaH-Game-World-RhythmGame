@@ -1315,21 +1315,21 @@ public final class RhythmPanel extends JPanel {
                 if (n.kind != Note.Kind.SIDE) continue;
                 if (n.isHold()) {
                     if (!n.tailJudged) {
-                        paintSideHoldNote(lane, n, now);
+                        paintNoteSafely(() -> paintSideHoldNote(lane, n, now));
                     }
                     continue;
                 }
                 if (n.judged) continue;
                 double y = JUDGE_Y - (n.timeMs - now) * pixelsPerMs;
                 if (y < -40 || y > PANEL_HEIGHT + 40) continue;
-                paintSideNote(lane, n, y);
+                paintNoteSafely(() -> paintSideNote(lane, n, y));
             }
             for (int i = chart.notes.size() - 1; i >= 0; i--) {
                 Note n = chart.notes.get(i);
                 if (n.kind == Note.Kind.SIDE) continue;
                 if (n.isHold()) {
                     if (!n.tailJudged) {
-                        paintHoldNote(lane, n, now);
+                        paintNoteSafely(() -> paintHoldNote(lane, n, now));
                     }
                     continue;
                 }
@@ -1337,7 +1337,7 @@ public final class RhythmPanel extends JPanel {
                 long dtMs = n.timeMs - now;
                 double y = JUDGE_Y - dtMs * pixelsPerMs;
                 if (y < -40 || y > PANEL_HEIGHT + 40) continue;
-                paintNote(lane, n, y);
+                paintNoteSafely(() -> paintNote(lane, n, y));
             }
         }
 
@@ -1566,6 +1566,22 @@ public final class RhythmPanel extends JPanel {
         g.fillRect(0, JUDGE_Y, panelWidth, 4);
     }
 
+    /** Runs one note's paint call, swallowing (and logging) any exception instead of letting it
+     *  propagate out of {@code paintComponent} — an uncaught exception partway through painting the
+     *  note list would abort every remaining note (and the judge line/HUD drawn after them) for that
+     *  frame, and since {@code repaint()} keeps asking for the exact same frame, it can repeat on
+     *  every subsequent one too: exactly "화면이 멈춘 것처럼 보인다" (the game looking frozen) with no
+     *  logged crash, the same class of bug {@link #paintSideInfoPanel}'s own try-catch guards
+     *  against. Worst case with this in place is one note's shape glitching or briefly vanishing,
+     *  never the whole game stalling. */
+    private static void paintNoteSafely(Runnable paint) {
+        try {
+            paint.run();
+        } catch (RuntimeException ex) {
+            java.util.logging.Logger.getLogger("djmax").warning("note paint failed: " + ex);
+        }
+    }
+
     private void paintNote(Graphics2D g, Note n, double y) {
         int lane = n.lane;
         if (settings.noteStyle() == RhythmSettings.NoteStyle.CLASSIC) {
@@ -1701,7 +1717,7 @@ public final class RhythmPanel extends JPanel {
     // PERFECT hit, and — once actually being held — the arrows spinning fast one way, slowing to a
     // stop, then reversing (see paintArcadeHoldHead). Only a little bigger than the tap note's own
     // ring, not a dramatically larger disc — comfortably inside a 120px lane either way.
-    private static final int ARCADE_HOLD_OUTER_RADIUS = 46;
+    private static final int ARCADE_HOLD_OUTER_RADIUS = 40;
     // How long before the head's hit time the approach indicator starts visibly closing in — not
     // tied to the PERFECT/GREAT/GOOD judgment windows (those are about how forgiving a late/early
     // press is, this is purely a visual countdown), so it can be tuned independently.
