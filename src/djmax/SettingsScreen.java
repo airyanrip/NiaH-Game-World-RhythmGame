@@ -1,5 +1,7 @@
 package djmax;
 
+import com.group_finity.mascot.lumi.plugin.PluginContext;
+
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -94,7 +96,7 @@ final class SettingsScreen {
      *  rebuilds this screen from scratch so the widgets show what was just restored.
      *  @param onExit the 전원 끄기 button — closes the whole rhythm-game window, after confirming.
      *  @param onClose called when the player is done — the caller swaps back to the Hub screen. */
-    static JComponent build(Window owner, GameHost ctx, RhythmSettings settings, Runnable onApplied,
+    static JComponent build(Window owner, PluginContext ctx, RhythmSettings settings, Runnable onApplied,
                              Runnable onReset, Runnable onExit, Runnable onClose) {
         List<Runnable> pending = new ArrayList<>();
 
@@ -400,7 +402,7 @@ final class SettingsScreen {
 
     // ── game ─────────────────────────────────────────────────────────────────
 
-    private static JPanel buildGameTab(GameHost ctx, RhythmSettings settings, List<Runnable> pending,
+    private static JPanel buildGameTab(PluginContext ctx, RhythmSettings settings, List<Runnable> pending,
                                         OffsetCalibrator.Overlay calibrationOverlay, LongConsumer[] offsetApplyHolder) {
         // Index matches Lang's own enum order (KO, EN, JA, ZH) so the combo's selection maps
         // straight to Lang.values()[index] — no per-language special-casing needed here.
@@ -485,7 +487,7 @@ final class SettingsScreen {
         return value;
     }
 
-    private static JPanel buildBackgroundUrlRow(GameHost ctx, RhythmSettings settings) {
+    private static JPanel buildBackgroundUrlRow(PluginContext ctx, RhythmSettings settings) {
         JPanel value = new JPanel(new BorderLayout(6, 0));
         value.setOpaque(false);
         JTextField urlField = new JTextField(settings.backgroundUrl());

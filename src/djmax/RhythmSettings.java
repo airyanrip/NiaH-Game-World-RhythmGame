@@ -1,13 +1,14 @@
 package djmax;
 
+import com.group_finity.mascot.lumi.plugin.PluginPrefs;
+
 import java.awt.event.KeyEvent;
 import java.nio.file.Path;
 
 /**
- * Typed access to this mod's own settings (a {@code settings.properties} file, via {@link
- * GamePrefs} — a real Little LUMI {@code PluginPrefs} when running as a plugin, or {@link
- * StandalonePrefs} in the standalone build). No state of its own — every getter reads through,
- * so the Hub/Settings windows and gameplay always agree on the current value.
+ * Typed access to this plugin's own settings ({@code plugindata\niah_rythmgame\settings.properties}
+ * via {@link PluginPrefs}). No state of its own — every getter reads through, so the Hub/Settings
+ * windows and gameplay always agree on the current value.
  */
 final class RhythmSettings {
     static final int LANES = 4;
@@ -30,9 +31,9 @@ final class RhythmSettings {
      *  rounded-rectangle pill (CLASSIC) — see {@link RhythmPanel#paintNote}. */
     enum NoteStyle { RING, CLASSIC }
 
-    private final GamePrefs prefs;
+    private final PluginPrefs prefs;
 
-    RhythmSettings(GamePrefs prefs) {
+    RhythmSettings(PluginPrefs prefs) {
         this.prefs = prefs;
     }
 

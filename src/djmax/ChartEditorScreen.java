@@ -1,6 +1,7 @@
 package djmax;
 
-import javax.swing.BorderFactory;
+import com.group_finity.mascot.lumi.plugin.PluginTheme;
+
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -10,7 +11,6 @@ import javax.swing.SpinnerNumberModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.logging.Logger;
@@ -27,7 +27,7 @@ final class ChartEditorScreen extends JPanel {
 
     /** @param onClose called for "close" and after a successful "save then close" — the caller
      *  swaps the shared window back to whatever screen should show next (normally the Hub). */
-    static ChartEditorScreen build(Logger log, File songFile, String title,
+    static ChartEditorScreen build(PluginTheme theme, Logger log, File songFile, String title,
                                     Path chartsDir, Runnable onSaved, Runnable onClose) throws Exception {
         Chart initial = ChartStore.load(chartsDir, songFile, title);
         if (initial == null) {
@@ -46,11 +46,11 @@ final class ChartEditorScreen extends JPanel {
                 5));
         speedSpinner.addChangeListener(e -> panel.setSpeedMultiplier((Integer) speedSpinner.getValue() / 100.0));
         JButton save = new JButton("저장");
-        styleOutline(save);
+        theme.button(save, PluginTheme.Button.OUTLINE);
         JButton saveClose = new JButton("저장 후 닫기");
-        stylePrimary(saveClose);
+        theme.button(saveClose, PluginTheme.Button.PRIMARY);
         JButton close = new JButton("닫기");
-        styleOutline(close);
+        theme.button(close, PluginTheme.Button.OUTLINE);
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         toolbar.add(speedLabel);
         toolbar.add(speedSpinner);
@@ -95,29 +95,5 @@ final class ChartEditorScreen extends JPanel {
     /** Releases the editor's audio preview resources — call when leaving this screen. */
     void close() {
         editor.close();
-    }
-
-    // Same look as HubPanel's own toolbar buttons — kept as a small local duplicate rather than
-    // reusing HubPanel's private helpers, and specifically NOT the Little LUMI SDK's PluginTheme
-    // (this used to call theme.button(...)): the standalone build has no PluginTheme to ask, and
-    // this class only ever needed a consistent look, not the actual app's live theme.
-    private static void styleOutline(JButton b) {
-        b.setFocusable(false);
-        b.setFocusPainted(false);
-        b.setBackground(new Color(30, 22, 34));
-        b.setForeground(new Color(238, 226, 236));
-        b.setBorder(BorderFactory.createLineBorder(new Color(238, 226, 236)));
-        b.setOpaque(true);
-        b.setFont(b.getFont().deriveFont(Font.BOLD, 12f));
-    }
-
-    private static void stylePrimary(JButton b) {
-        b.setFocusable(false);
-        b.setFocusPainted(false);
-        b.setBackground(new Color(255, 45, 138));
-        b.setForeground(Color.BLACK);
-        b.setBorder(BorderFactory.createEmptyBorder(8, 26, 8, 26));
-        b.setFont(b.getFont().deriveFont(Font.BOLD, 16f));
-        b.setOpaque(true);
     }
 }

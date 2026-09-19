@@ -27,10 +27,9 @@ public final class DjmaxPlugin implements LumiPlugin {
     @Override
     public void start(PluginContext ctx) throws Exception {
         migrateOldDataDirIfNeeded(ctx);
-        GameHost host = new LittleLumiGameHost(ctx);
-        ctx.addTrayItem("니아의 게임월드", () -> ctx.onEdt(() -> HubWindow.open(host)));
+        ctx.addTrayItem("니아의 게임월드", () -> ctx.onEdt(() -> HubWindow.open(ctx)));
         ctx.addCharacterMenuItem("니아의 게임월드", "Niah"::equals,
-                (imageSet, mascotId) -> ctx.onEdt(() -> HubWindow.open(host)));
+                (imageSet, mascotId) -> ctx.onEdt(() -> HubWindow.open(ctx)));
     }
 
     @Override
