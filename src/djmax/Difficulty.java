@@ -30,7 +30,12 @@ public enum Difficulty {
     // ceiling" convention.
     EASY(1.60, 220, Double.MAX_VALUE, Long.MAX_VALUE, 0.8),
     NORMAL(1.35, 120, 3.2, 1100, 1.0),
-    HARD(1.15, 70, 2.6, 800, 1.3);
+    HARD(1.15, 70, 2.6, 800, 1.3),
+    // "채보가 빠른 버전" — a denser, faster-paced chart at the song's own real tempo (nothing here
+    // touches playback speed or pitch; an earlier attempt at "faster notes" resampled the audio
+    // itself instead, which desynced from the beat and wasn't what was wanted). Continues the same
+    // EASY→NORMAL→HARD step size one more notch, not an arbitrary jump.
+    FAST(1.05, 50, 2.2, 600, 1.6);
 
     final double thresholdRatio;
     final long minGapMs;

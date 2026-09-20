@@ -77,7 +77,7 @@ final class HubPanel extends JPanel {
     // One color per difficulty page (EASY, NORMAL, HARD, matching Difficulty's declaration order) —
     // green/pink/red is the familiar traffic-light-ish convention, so the color alone hints at the
     // difficulty even before reading the label.
-    private static final Color[] DIFFICULTY_COLORS = {new Color(120, 220, 140), ACCENT_CYAN, ACCENT_RED};
+    private static final Color[] DIFFICULTY_COLORS = {new Color(120, 220, 140), ACCENT_CYAN, ACCENT_RED, new Color(255, 165, 40)};
     // Deliberately much bigger than a song-list row thumbnail (see SongCarousel's own, smaller
     // sizes) — this is the one thing the player is about to actually play, so it gets the most
     // screen real estate of any single image here.
@@ -641,7 +641,8 @@ final class HubPanel extends JPanel {
         String[] labels = {
                 Lang.t(settings, "settings.difficulty.easy"),
                 Lang.t(settings, "settings.difficulty.normal"),
-                Lang.t(settings, "settings.difficulty.hard")};
+                Lang.t(settings, "settings.difficulty.hard"),
+                Lang.t(settings, "settings.difficulty.fast")};
         Color accent = DIFFICULTY_COLORS[current.ordinal()];
         difficultyValueLabel.setText(labels[current.ordinal()]);
         difficultyValueLabel.setForeground(accent);

@@ -101,6 +101,7 @@ enum Lang {
             Map.entry("settings.difficulty.easy", new String[]{"쉬움", "Easy", "簡単", "简单"}),
             Map.entry("settings.difficulty.normal", new String[]{"보통", "Normal", "普通", "普通"}),
             Map.entry("settings.difficulty.hard", new String[]{"어려움", "Hard", "難しい", "困难"}),
+            Map.entry("settings.difficulty.fast", new String[]{"빠름", "Fast", "速い", "快速"}),
             Map.entry("settings.countdown", new String[]{"카운트다운", "Countdown", "カウントダウン", "倒计时"}),
             Map.entry("settings.countdown.suffix", new String[]{"초 (0=끄기)", "sec (0=off)", "秒（0＝オフ）", "秒（0=关闭）"}),
             Map.entry("settings.judgmentWindow", new String[]{"판정 타이밍 조절 (넉넉함 ↔ 빡빡함)", "Judgment timing (lenient ↔ strict)", "判定タイミング調整（緩い↔厳しい）", "判定时机调整（宽松↔严格）"}),

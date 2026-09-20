@@ -1176,6 +1176,7 @@ public final class RhythmPanel extends JPanel {
             case EASY -> Lang.t(settings, "settings.difficulty.easy");
             case NORMAL -> Lang.t(settings, "settings.difficulty.normal");
             case HARD -> Lang.t(settings, "settings.difficulty.hard");
+            case FAST -> Lang.t(settings, "settings.difficulty.fast");
         };
     }
 
