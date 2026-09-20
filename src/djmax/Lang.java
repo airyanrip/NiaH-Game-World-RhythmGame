@@ -53,7 +53,6 @@ enum Lang {
             Map.entry("hub.levelUp", new String[]{"LEVEL UP!", "LEVEL UP!", "LEVEL UP!", "LEVEL UP!"}),
             Map.entry("hub.sideNotes", new String[]{"Shift키 노트", "Shift Key Notes", "Shiftキーノーツ", "Shift键音符"}),
             Map.entry("hub.autoPlay", new String[]{"퍼펙트 오토", "Perfect Auto", "パーフェクトオート", "完美自动"}),
-            Map.entry("hub.fastNoteSpeed", new String[]{"노트 속도 빠르게", "Fast Note Speed", "ノーツ速度アップ", "音符速度加快"}),
             Map.entry("hub.downloading", new String[]{"유튜브에서 내려받는 중…", "Downloading from YouTube…", "YouTubeからダウンロード中…", "正在从YouTube下载…"}),
             Map.entry("hub.pickSongFirst", new String[]{"먼저 곡을 골라주세요.", "Pick a song first.", "まず曲を選んでください。", "请先选择一首歌曲。"}),
             Map.entry("hub.confirmDeleteAll", new String[]{"라이브러리의 모든 곡을 지울까요?", "Delete every song in the library?", "ライブラリ内のすべての曲を削除しますか？", "要删除曲库中的所有歌曲吗？"}),

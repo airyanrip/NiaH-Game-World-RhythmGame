@@ -211,11 +211,6 @@ public final class RhythmPanel extends JPanel {
     private final boolean[] laneKeyDown = new boolean[LANES];
 
     public RhythmPanel(Chart chart, RhythmSettings settings, File thumbnailFile, Consumer<Result> onFinished) throws Exception {
-        // Resolved once, up front: the audio gets resampled to this speed below, which compresses
-        // its own timeline by the same factor, so the chart's note timings need the identical
-        // scaling or they drift out of sync with the beat as the song goes on — see Chart#withSpeed.
-        double speed = settings.effectivePlaybackSpeed();
-        chart = Chart.withSpeed(chart, speed);
         this.chart = chart;
         this.settings = settings;
         this.onFinished = onFinished;
@@ -254,6 +249,7 @@ public final class RhythmPanel extends JPanel {
             format = in.getFormat();
             pcm = in.readAllBytes();
         }
+        double speed = settings.playbackSpeed();
         if (speed != 1.0) {
             pcm = AudioResampler.resample(pcm, format, speed);
         }

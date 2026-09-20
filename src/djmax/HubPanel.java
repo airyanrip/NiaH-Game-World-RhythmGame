@@ -103,7 +103,6 @@ final class HubPanel extends JPanel {
     private final JButton practiceModeButton = new JButton();
     private final JButton sideNotesButton = new JButton();
     private final JButton autoPlayButton = new JButton();
-    private final JButton fastNoteSpeedButton = new JButton();
     private JLabel difficultyValueLabel;
     private JButton difficultyPrevButton;
     private JButton difficultyNextButton;
@@ -1016,19 +1015,12 @@ final class HubPanel extends JPanel {
             refreshAutoPlayButton();
         });
         refreshAutoPlayButton();
-        styleOutlineButton(fastNoteSpeedButton, TEXT_DIM);
-        fastNoteSpeedButton.addActionListener(e -> {
-            settings.setFastNoteSpeedEnabled(!settings.fastNoteSpeedEnabled());
-            refreshFastNoteSpeedButton();
-        });
-        refreshFastNoteSpeedButton();
         JButton edit = new JButton(Lang.t(settings, "hub.editChart"));
         styleOutlineButton(edit, TEXT_LIGHT);
         edit.addActionListener(e -> editSelected());
         secondaryRow.add(practiceModeButton);
         secondaryRow.add(sideNotesButton);
         secondaryRow.add(autoPlayButton);
-        secondaryRow.add(fastNoteSpeedButton);
         secondaryRow.add(edit);
         secondaryRow.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(secondaryRow);
@@ -1187,18 +1179,6 @@ final class HubPanel extends JPanel {
         autoPlayButton.setText(Lang.t(settings, "hub.autoPlay") + ": "
                 + Lang.t(settings, on ? "settings.on" : "settings.off"));
         setOutlineAccent(autoPlayButton, on ? new Color(120, 220, 140) : TEXT_DIM);
-    }
-
-    /** Picked here, next to Play, same reasoning as practice mode/side notes/auto-play — "how the
-     *  next Play behaves," not a Settings-screen slider. On: the audio plays back at {@link
-     *  RhythmSettings#FAST_NOTE_SPEED_MULTIPLIER} and the chart's own note timings are rescaled to
-     *  match (see {@link Chart#withSpeed}), so notes stay lined up with the now-faster beat instead
-     *  of drifting — "곡 박자에는 맞게 새로 생성". */
-    private void refreshFastNoteSpeedButton() {
-        boolean on = settings.fastNoteSpeedEnabled();
-        fastNoteSpeedButton.setText(Lang.t(settings, "hub.fastNoteSpeed") + ": "
-                + Lang.t(settings, on ? "settings.on" : "settings.off"));
-        setOutlineAccent(fastNoteSpeedButton, on ? new Color(120, 220, 140) : TEXT_DIM);
     }
 
     /** @return {@code chart} unchanged if side notes are on; otherwise a copy with every
