@@ -103,6 +103,7 @@ final class HubPanel extends JPanel {
     private final JButton practiceModeButton = new JButton();
     private final JButton sideNotesButton = new JButton();
     private final JButton autoPlayButton = new JButton();
+    private final JButton tempoUpButton = new JButton();
     private JLabel difficultyValueLabel;
     private JButton difficultyPrevButton;
     private JButton difficultyNextButton;
@@ -1015,12 +1016,19 @@ final class HubPanel extends JPanel {
             refreshAutoPlayButton();
         });
         refreshAutoPlayButton();
+        styleOutlineButton(tempoUpButton, TEXT_DIM);
+        tempoUpButton.addActionListener(e -> {
+            settings.setTempoUpEnabled(!settings.tempoUpEnabled());
+            refreshTempoUpButton();
+        });
+        refreshTempoUpButton();
         JButton edit = new JButton(Lang.t(settings, "hub.editChart"));
         styleOutlineButton(edit, TEXT_LIGHT);
         edit.addActionListener(e -> editSelected());
         secondaryRow.add(practiceModeButton);
         secondaryRow.add(sideNotesButton);
         secondaryRow.add(autoPlayButton);
+        secondaryRow.add(tempoUpButton);
         secondaryRow.add(edit);
         secondaryRow.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(secondaryRow);
@@ -1179,6 +1187,17 @@ final class HubPanel extends JPanel {
         autoPlayButton.setText(Lang.t(settings, "hub.autoPlay") + ": "
                 + Lang.t(settings, on ? "settings.on" : "settings.off"));
         setOutlineAccent(autoPlayButton, on ? new Color(120, 220, 140) : TEXT_DIM);
+    }
+
+    /** Purely a note fall-speed multiplier on top of {@link RhythmSettings#noteSpeed()} — see
+     *  {@link RhythmSettings#effectiveNoteSpeed()}. Independent of difficulty: the chart that gets
+     *  generated/played (note count and pattern) is exactly the same either way, and the song's own
+     *  audio plays back at its normal speed and pitch. Off by default. */
+    private void refreshTempoUpButton() {
+        boolean on = settings.tempoUpEnabled();
+        tempoUpButton.setText(Lang.t(settings, "hub.tempoUp") + ": "
+                + Lang.t(settings, on ? "settings.on" : "settings.off"));
+        setOutlineAccent(tempoUpButton, on ? new Color(120, 220, 140) : TEXT_DIM);
     }
 
     /** @return {@code chart} unchanged if side notes are on; otherwise a copy with every

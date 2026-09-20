@@ -126,6 +126,26 @@ final class RhythmSettings {
         prefs.set("note_speed_pct", (int) Math.round(clamp(v, 0.5, 2.5) * 100));
     }
 
+    // ── tempo up: a Hub toggle (not a difficulty) that only multiplies the visual scroll speed
+    // above — the song's actual audio playback and pitch are never touched, and the chart itself
+    // (note count/pattern for whatever difficulty is selected) is generated exactly as normal.
+    // See RhythmPanel's pixelsPerMs calculation, the only place effectiveNoteSpeed() is read. ────
+    static final double TEMPO_UP_MULTIPLIER = 1.4;
+
+    boolean tempoUpEnabled() {
+        return prefs.getBoolean("tempo_up_enabled", false);
+    }
+
+    void setTempoUpEnabled(boolean on) {
+        prefs.set("tempo_up_enabled", on);
+    }
+
+    /** {@link #noteSpeed()}, boosted by {@link #TEMPO_UP_MULTIPLIER} when Tempo Up is on. */
+    double effectiveNoteSpeed() {
+        double base = noteSpeed();
+        return tempoUpEnabled() ? clamp(base * TEMPO_UP_MULTIPLIER, 0.5, 3.5) : base;
+    }
+
     // ── playback speed multiplier: actually resamples the audio (pitch moves with it) ─
     double playbackSpeed() {
         return clamp(prefs.getInt("playback_speed_pct", 100) / 100.0, 0.5, 2.0);

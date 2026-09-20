@@ -220,7 +220,7 @@ public final class RhythmPanel extends JPanel {
             laneLabels[i] = KeyLabels.of(laneKeys[i]);
         }
         this.sideKey = settings.sideKey();
-        this.pixelsPerMs = BASE_PIXELS_PER_MS * settings.noteSpeed() * chart.speedMultiplier;
+        this.pixelsPerMs = BASE_PIXELS_PER_MS * settings.effectiveNoteSpeed() * chart.speedMultiplier;
         this.offsetMs = settings.offsetMs();
         this.countdownTotalMs = settings.countdownSeconds() * 1000;
         int judgmentScale = settings.judgmentWindowScalePercent();
