@@ -79,6 +79,9 @@ public final class RhythmPanel extends JPanel {
     private static final long LANE_FLASH_MS = 130;
     private static final long HIT_BURST_MS = 240;
     private static final long MISS_FLASH_MS = 280;
+    // A PERFECT hit's screen-wide judge-line flash + lingering afterglow — much longer than the
+    // other feedback effects since the whole point is that it stays a while, not just pops.
+    private static final long PERFECT_FLASH_MS = 650;
     private static final long COMBO_PULSE_MS = 160;
     private static final long MILESTONE_MS = 700;
 
@@ -192,7 +195,7 @@ public final class RhythmPanel extends JPanel {
     private int feverLevel = 0;
     private long feverBannerUntil = 0;
 
-    private enum EffectKind { LANE_FLASH, HIT_BURST, MISS_FLASH }
+    private enum EffectKind { LANE_FLASH, HIT_BURST, MISS_FLASH, PERFECT_FLASH }
     /** {@code strength} scales a HIT_BURST's size/particle count — 1.0 for PERFECT, tapering down
      *  for GREAT/GOOD, so nailing the timing reads as visibly bigger than a scrappy press, not just
      *  a different color. Unused (always 1) for LANE_FLASH/MISS_FLASH. */
@@ -828,6 +831,7 @@ public final class RhythmPanel extends JPanel {
             case "PERFECT" -> {
                 sfx.playPerfect();
                 healHealth(HEALTH_GAIN_PERFECT);
+                effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
             }
             case "GREAT" -> sfx.playGreat();
             default -> sfx.playGood();
@@ -1342,6 +1346,7 @@ public final class RhythmPanel extends JPanel {
         }
 
         paintHitBursts(lane, nowWall);
+        paintPerfectFlash(lane, panelWidth, nowWall);
 
         // All of this — lane key labels, the SCORE/combo/FEVER HUD, judgment/milestone/FEVER
         // popups — is live-play furniture with no reason to keep rendering once results/game over
@@ -2116,6 +2121,45 @@ public final class RhythmPanel extends JPanel {
         }
     }
 
+    /** A soft, screen-wide flash at the judge line on a PERFECT hit, lingering and fading out
+     *  rather than popping and vanishing — approved via draft mockup (Downloads\꼬미_니아모드\
+     *  draft_perfect_flash_*.png). The band's height only shrinks a little as it fades (from
+     *  {@code exp(-3.5t)} decay) — most of the falloff is in alpha, not size — so the afterglow
+     *  reads as actually lingering at that spot, not just the peak flash quietly shrinking away.
+     *  A brief white-hot radial core rides on top for the first half of the effect, for the
+     *  "섬광" (flash) part; past that it's just the fading colored band, the "이펙트를 더 남기고"
+     *  (leftover effect) part. */
+    private void paintPerfectFlash(Graphics2D g, int panelWidth, long nowWall) {
+        for (Effect e : effects) {
+            if (e.kind() != EffectKind.PERFECT_FLASH) continue;
+            long age = ageMs(e, nowWall);
+            if (age > PERFECT_FLASH_MS) continue;
+            double t = age / (double) PERFECT_FLASH_MS;
+            double intensity = Math.exp(-3.5 * t);
+            int bandHalfHeight = (int) Math.round(50 + 40 * intensity);
+            int glowAlpha = (int) Math.round(220 * intensity);
+            Color base = e.color();
+            Paint old = g.getPaint();
+            g.setPaint(new GradientPaint(0, JUDGE_Y - bandHalfHeight, withAlpha(base, 0),
+                    0, JUDGE_Y, withAlpha(base, glowAlpha)));
+            g.fillRect(0, JUDGE_Y - bandHalfHeight, panelWidth, bandHalfHeight);
+            g.setPaint(new GradientPaint(0, JUDGE_Y, withAlpha(base, glowAlpha),
+                    0, JUDGE_Y + bandHalfHeight, withAlpha(base, 0)));
+            g.fillRect(0, JUDGE_Y, panelWidth, bandHalfHeight);
+            g.setPaint(old);
+
+            if (intensity > 0.5) {
+                float coreAlpha = (float) Math.min(1.0, (intensity - 0.5) * 2);
+                Paint corePaint = new RadialGradientPaint(new Point2D.Float(panelWidth / 2f, JUDGE_Y),
+                        panelWidth * 0.55f, new float[]{0f, 1f},
+                        new Color[]{withAlpha(Color.WHITE, (int) (180 * coreAlpha)), withAlpha(Color.WHITE, 0)});
+                g.setPaint(corePaint);
+                g.fillRect(0, JUDGE_Y - bandHalfHeight, panelWidth, bandHalfHeight * 2);
+                g.setPaint(old);
+            }
+        }
+    }
+
     private static long ageMs(Effect e, long nowWall) {
         return nowWall - e.startedAtMs();
     }
@@ -2125,6 +2169,7 @@ public final class RhythmPanel extends JPanel {
             case LANE_FLASH -> LANE_FLASH_MS;
             case HIT_BURST -> HIT_BURST_MS;
             case MISS_FLASH -> MISS_FLASH_MS;
+            case PERFECT_FLASH -> PERFECT_FLASH_MS;
         };
     }
 

@@ -7,9 +7,10 @@ import javax.sound.sampled.FloatControl;
 import java.io.ByteArrayInputStream;
 
 /**
- * Hit-feel audio: a bright short tick per judgment tier (pitched differently so PERFECT feels
- * crisper than GOOD) and a dull thud for a miss, all synthesized in memory. Each sound keeps a
- * small round-robin pool of {@link Clip}s so two hits half a beat apart don't cut each other off.
+ * Hit-feel audio: a punchy short tick per judgment tier (pitched differently so PERFECT feels
+ * crisper than GOOD — see {@link Tone#punch}) and a dull thud for a miss, all synthesized in
+ * memory. Each sound keeps a small round-robin pool of {@link Clip}s so two hits half a beat
+ * apart don't cut each other off.
  */
 final class SoundFX {
     private static final AudioFormat FORMAT = new AudioFormat(Tone.SAMPLE_RATE, 16, 1, true, false);
@@ -22,9 +23,13 @@ final class SoundFX {
     private int pi, gi, gdi, mi;
 
     SoundFX(String outputMixerName) {
-        fill(perfect, Tone.synth(1300, 15, 0.55), outputMixerName);
-        fill(great, Tone.synth(950, 16, 0.5), outputMixerName);
-        fill(good, Tone.synth(720, 18, 0.45), outputMixerName);
+        // Longer than the old 15-18ms plain sines — enough room for Tone.punch's exponential
+        // decay + sub-bass thump to actually be heard, while staying tight/percussive rather than
+        // a sustained note. Miss stays a plain, un-punchy synth() thud — it's a "that was wrong"
+        // cue, not something that should feel satisfying to trigger.
+        fill(perfect, Tone.punch(1300, 45, 0.6), outputMixerName);
+        fill(great, Tone.punch(950, 42, 0.55), outputMixerName);
+        fill(good, Tone.punch(720, 38, 0.5), outputMixerName);
         fill(miss, Tone.synth(150, 55, 0.4), outputMixerName);
     }
 
