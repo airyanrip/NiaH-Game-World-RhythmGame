@@ -77,7 +77,9 @@ public final class RhythmPanel extends JPanel {
     private static final long LEAD_IN_MS = 2000;
 
     private static final long LANE_FLASH_MS = 130;
-    private static final long HIT_BURST_MS = 240;
+    // A water-ripple spread reads as a slightly slower phenomenon than the old spark burst did,
+    // hence longer than the previous 240ms.
+    private static final long HIT_RIPPLE_MS = 320;
     private static final long MISS_FLASH_MS = 280;
     // A PERFECT hit's screen-wide judge-line flash + lingering afterglow — much longer than the
     // other feedback effects since the whole point is that it stays a while, not just pops.
@@ -195,8 +197,8 @@ public final class RhythmPanel extends JPanel {
     private int feverLevel = 0;
     private long feverBannerUntil = 0;
 
-    private enum EffectKind { LANE_FLASH, HIT_BURST, MISS_FLASH, PERFECT_FLASH }
-    /** {@code strength} scales a HIT_BURST's size/particle count — 1.0 for PERFECT, tapering down
+    private enum EffectKind { LANE_FLASH, HIT_RIPPLE, MISS_FLASH, PERFECT_FLASH }
+    /** {@code strength} scales a HIT_RIPPLE's ring size/count — 1.0 for PERFECT, tapering down
      *  for GREAT/GOOD, so nailing the timing reads as visibly bigger than a scrappy press, not just
      *  a different color. Unused (always 1) for LANE_FLASH/MISS_FLASH. */
     private record Effect(long startedAtMs, int lane, Color color, EffectKind kind, float strength) {
@@ -831,7 +833,9 @@ public final class RhythmPanel extends JPanel {
             case "PERFECT" -> {
                 sfx.playPerfect();
                 healHealth(HEALTH_GAIN_PERFECT);
-                effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
+                if (settings.perfectFlashEnabled()) {
+                    effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
+                }
             }
             case "GREAT" -> sfx.playGreat();
             default -> sfx.playGood();
@@ -844,7 +848,7 @@ public final class RhythmPanel extends JPanel {
             case "GREAT" -> 0.75f;
             default -> 0.55f;
         };
-        effects.add(new Effect(nowWall, lane, judgeColor(tier), EffectKind.HIT_BURST, strength));
+        effects.add(new Effect(nowWall, lane, judgeColor(tier), EffectKind.HIT_RIPPLE, strength));
     }
 
     /** Books one fully-resolved note's score/tally/accuracy contribution — a tap right away, or a
@@ -1345,7 +1349,7 @@ public final class RhythmPanel extends JPanel {
             }
         }
 
-        paintHitBursts(lane, nowWall);
+        paintHitRipples(lane, nowWall);
         paintPerfectFlash(lane, panelWidth, nowWall);
 
         // All of this — lane key labels, the SCORE/combo/FEVER HUD, judgment/milestone/FEVER
@@ -2063,48 +2067,43 @@ public final class RhythmPanel extends JPanel {
         }
     }
 
-    /** A hit's judgment burst: a bright core flash, two staggered expanding rings, and a handful of
-     *  sparks radiating outward — a step up from a single expanding ring — all scaled by {@link
-     *  Effect#strength()} so a PERFECT visibly pops more than a scrappy GOOD, not just in color. */
-    private void paintHitBursts(Graphics2D g, long nowWall) {
+    /** A hit's judgment feedback: a small "splash" dot right at the impact point, then a few
+     *  staggered rings expanding outward and thinning/fading as they spread — a water ripple
+     *  spreading from where a drop landed, not the previous version's radiating spark burst
+     *  ("호수에 물방울 떨어진 것처럼 작은 물결이 치도록"). Same color per tier as before ({@link
+     *  #judgeColor}); {@link Effect#strength()} scales how far the rings spread and how many
+     *  overlap at once, so a PERFECT still visibly reads as bigger than a scrappy GOOD. */
+    private void paintHitRipples(Graphics2D g, long nowWall) {
         int panelWidth = LANES * LANE_WIDTH;
         for (Effect e : effects) {
-            if (e.kind() != EffectKind.HIT_BURST) continue;
+            if (e.kind() != EffectKind.HIT_RIPPLE) continue;
             long age = ageMs(e, nowWall);
-            if (age > HIT_BURST_MS) continue;
-            double t = age / (double) HIT_BURST_MS;
-            float alpha = (float) (1.0 - t);
+            if (age > HIT_RIPPLE_MS) continue;
+            double t = age / (double) HIT_RIPPLE_MS;
             float strength = e.strength();
             int cx = e.lane() < 0 ? panelWidth / 2 : e.lane() * LANE_WIDTH + LANE_WIDTH / 2;
             int cy = JUDGE_Y;
 
-            if (t < 0.35) {
-                float coreAlpha = (float) (1.0 - t / 0.35) * strength;
-                double coreRadius = 9 + 9 * strength;
-                g.setColor(withAlpha(Color.WHITE, Math.round(200 * coreAlpha)));
-                g.fill(new Ellipse2D.Double(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2));
+            // The initial "splash" at the drop point — brief, small, and soft, not a hard flash.
+            if (t < 0.25) {
+                float dotAlpha = (float) (1.0 - t / 0.25) * strength;
+                double dotRadius = 4 + 4 * strength;
+                g.setColor(withAlpha(Color.WHITE, Math.round(140 * dotAlpha)));
+                g.fill(new Ellipse2D.Double(cx - dotRadius, cy - dotRadius, dotRadius * 2, dotRadius * 2));
             }
 
-            for (int ring = 0; ring < 2; ring++) {
-                double ringT = Math.min(1.0, t + ring * 0.18);
-                double radius = 4 + (10 + 30 * strength) * ringT;
-                float ringAlpha = (float) (1.0 - ringT) * (ring == 0 ? 1f : 0.6f);
-                g.setColor(withAlpha(e.color(), Math.round(200 * ringAlpha)));
-                g.setStroke(new BasicStroke(ring == 0 ? 3f : 2f));
+            // 3 rings, each starting a little after the last (real ripples don't all move in
+            // lockstep) — each thins and fades as it expands, so the outermost/oldest ring is
+            // always the faintest and thinnest, like an actual wave losing amplitude as it spreads.
+            double maxRadius = 12 + 30 * strength;
+            for (int ring = 0; ring < 3; ring++) {
+                double ringT = t - ring * 0.12;
+                if (ringT < 0 || ringT > 1) continue;
+                double radius = 3 + maxRadius * ringT;
+                float ringAlpha = (float) (1.0 - ringT);
+                g.setColor(withAlpha(e.color(), Math.round(180 * ringAlpha)));
+                g.setStroke(new BasicStroke((float) Math.max(0.6, 2.2 * (1 - ringT))));
                 g.draw(new Ellipse2D.Double(cx - radius, cy - radius, radius * 2, radius * 2));
-            }
-
-            int sparkCount = 4 + Math.round(4 * strength);
-            double travel = 12 + 40 * strength * t;
-            double sparkLen = 3 + 9 * (1 - t);
-            g.setColor(withAlpha(e.color(), Math.round(180 * alpha)));
-            g.setStroke(new BasicStroke(2.2f));
-            for (int i = 0; i < sparkCount; i++) {
-                double angle = (Math.PI * 2 / sparkCount) * i + Math.PI / 6;
-                double dx = Math.cos(angle), dy = Math.sin(angle);
-                double x1 = cx + dx * travel, y1 = cy + dy * travel;
-                double x2 = cx + dx * (travel + sparkLen), y2 = cy + dy * (travel + sparkLen);
-                g.draw(new Line2D.Double(x1, y1, x2, y2));
             }
         }
     }
@@ -2147,7 +2146,7 @@ public final class RhythmPanel extends JPanel {
             double bandHalfWidth = panelWidth * 0.68; // reaches a bit past the edges so the visible
                                                         // glow itself fades out approaching them,
                                                         // rather than being cut off by the panel edge
-            int glowAlpha = (int) Math.round(120 * intensity); // was 220 — much less "눈부시다"
+            int glowAlpha = (int) Math.round(70 * intensity); // was 220, then 120 — even less "눈부시다"
             Color base = e.color();
             Paint old = g.getPaint();
 
@@ -2157,7 +2156,7 @@ public final class RhythmPanel extends JPanel {
             if (intensity > 0.5) {
                 float coreAlpha = (float) Math.min(1.0, (intensity - 0.5) * 2);
                 fillSoftEllipse(g, panelWidth / 2.0, JUDGE_Y, bandHalfWidth * 0.7, bandHalfHeight * 0.6,
-                        withAlpha(Color.WHITE, (int) (90 * coreAlpha))); // was 180 — much less "눈부시다"
+                        withAlpha(Color.WHITE, (int) (55 * coreAlpha))); // was 180, then 90 — even less "눈부시다"
             }
             g.setPaint(old);
         }
@@ -2189,7 +2188,7 @@ public final class RhythmPanel extends JPanel {
     private static long durationOf(EffectKind kind) {
         return switch (kind) {
             case LANE_FLASH -> LANE_FLASH_MS;
-            case HIT_BURST -> HIT_BURST_MS;
+            case HIT_RIPPLE -> HIT_RIPPLE_MS;
             case MISS_FLASH -> MISS_FLASH_MS;
             case PERFECT_FLASH -> PERFECT_FLASH_MS;
         };

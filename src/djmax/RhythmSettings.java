@@ -398,6 +398,16 @@ final class RhythmSettings {
         prefs.set("side_info_panel_opacity_pct", Math.max(0, Math.min(100, percent)));
     }
 
+    // ── PERFECT judge-line flash + afterglow (RhythmPanel#paintPerfectFlash) — on by default,
+    // toggle-off for players who find any screen flash distracting. ───────────────────────────────
+    boolean perfectFlashEnabled() {
+        return prefs.getBoolean("perfect_flash_enabled", true);
+    }
+
+    void setPerfectFlashEnabled(boolean on) {
+        prefs.set("perfect_flash_enabled", on);
+    }
+
     int fpsLimit() {
         int v = prefs.getInt("fps_limit", 60);
         return switch (v) {
@@ -516,6 +526,7 @@ final class RhythmSettings {
         setAntiAliasing(true);
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);
+        setPerfectFlashEnabled(true);
         setFpsLimit(60);
         setColorVision(ColorVision.NORMAL);
         setLanguage(Lang.KO);
