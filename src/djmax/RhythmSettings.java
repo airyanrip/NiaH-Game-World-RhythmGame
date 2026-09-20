@@ -31,9 +31,9 @@ final class RhythmSettings {
      *  original thin rounded-rectangle pill (CLASSIC) — see {@link RhythmPanel#paintNote}. */
     enum NoteStyle { RING, CLASSIC }
 
-    /** The per-hit judgment feedback at the judge line — RIPPLE (water rings spreading from the
-     *  hit point, the default) or the original BURST (radiating sparks) — see {@link
-     *  RhythmPanel#paintHitEffects}. */
+    /** The per-hit judgment feedback at the judge line — BURST (radiating sparks, shown to
+     *  players as "폭죽 파티클"/"Firework Particles", the default) or RIPPLE (water rings
+     *  spreading from the hit point) — see {@link RhythmPanel#paintHitEffects}. */
     enum HitEffectStyle { RIPPLE, BURST }
 
     private final PluginPrefs prefs;
@@ -376,12 +376,12 @@ final class RhythmSettings {
     HitEffectStyle hitEffectStyle() {
         String v = prefs.get("hit_effect_style", null);
         if (v == null) {
-            return HitEffectStyle.RIPPLE;
+            return HitEffectStyle.BURST;
         }
         try {
             return HitEffectStyle.valueOf(v.strip().toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return HitEffectStyle.RIPPLE;
+            return HitEffectStyle.BURST;
         }
     }
 
@@ -544,7 +544,7 @@ final class RhythmSettings {
         setGameHorizontalAnchor(HorizontalAnchor.CENTER);
         setSongListStyle(SongListStyle.CAROUSEL);
         setNoteStyle(NoteStyle.RING);
-        setHitEffectStyle(HitEffectStyle.RIPPLE);
+        setHitEffectStyle(HitEffectStyle.BURST);
         setAntiAliasing(true);
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);

@@ -81,7 +81,7 @@ enum Lang {
             Map.entry("settings.noteStyle.classic", new String[]{"직사각형", "Rectangle", "長方形", "矩形"}),
             Map.entry("settings.hitEffectStyle", new String[]{"타격 이펙트", "Hit effect", "ヒットエフェクト", "打击特效"}),
             Map.entry("settings.hitEffectStyle.ripple", new String[]{"물결", "Ripple", "波紋", "水波纹"}),
-            Map.entry("settings.hitEffectStyle.burst", new String[]{"터지는 효과", "Burst", "弾ける効果", "爆裂效果"}),
+            Map.entry("settings.hitEffectStyle.burst", new String[]{"폭죽 파티클", "Firework Particles", "花火パーティクル", "烟花粒子"}),
             Map.entry("settings.windowed", new String[]{"창 모드", "Windowed", "ウィンドウモード", "窗口模式"}),
             Map.entry("settings.fullscreen", new String[]{"전체화면", "Fullscreen", "フルスクリーン", "全屏"}),
             Map.entry("settings.antiAliasing", new String[]{"계단현상 방지 (안티에일리어싱)", "Anti-aliasing", "アンチエイリアス（ジャギー軽減）", "抗锯齿"}),
