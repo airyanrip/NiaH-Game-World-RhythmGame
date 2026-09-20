@@ -361,6 +361,14 @@ final class SettingsScreen {
         noteStyleCombo.setSelectedIndex(settings.noteStyle().ordinal());
         pending.add(() -> settings.setNoteStyle(noteStyleValues[noteStyleCombo.getSelectedIndex()]));
 
+        String[] hitEffectLabels = {
+                Lang.t(settings, "settings.hitEffectStyle.ripple"),
+                Lang.t(settings, "settings.hitEffectStyle.burst")};
+        RhythmSettings.HitEffectStyle[] hitEffectValues = RhythmSettings.HitEffectStyle.values();
+        JComboBox<String> hitEffectCombo = styledCombo(hitEffectLabels);
+        hitEffectCombo.setSelectedIndex(settings.hitEffectStyle().ordinal());
+        pending.add(() -> settings.setHitEffectStyle(hitEffectValues[hitEffectCombo.getSelectedIndex()]));
+
         JComboBox<String> aaCombo = onOffCombo(settings, settings.antiAliasing());
         pending.add(() -> settings.setAntiAliasing(isOn(aaCombo)));
 
@@ -395,6 +403,7 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.gamePosition"), anchorCombo));
         tab.add(row(Lang.t(settings, "settings.songListStyle"), listStyleCombo));
         tab.add(row(Lang.t(settings, "settings.noteStyle"), noteStyleCombo));
+        tab.add(row(Lang.t(settings, "settings.hitEffectStyle"), hitEffectCombo));
         tab.add(row(Lang.t(settings, "settings.antiAliasing"), aaCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel"), sideInfoCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel.opacity"), sideInfoOpacityValue));

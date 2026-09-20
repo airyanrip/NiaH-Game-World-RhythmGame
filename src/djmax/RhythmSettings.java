@@ -31,6 +31,11 @@ final class RhythmSettings {
      *  original thin rounded-rectangle pill (CLASSIC) — see {@link RhythmPanel#paintNote}. */
     enum NoteStyle { RING, CLASSIC }
 
+    /** The per-hit judgment feedback at the judge line — RIPPLE (water rings spreading from the
+     *  hit point, the default) or the original BURST (radiating sparks) — see {@link
+     *  RhythmPanel#paintHitEffects}. */
+    enum HitEffectStyle { RIPPLE, BURST }
+
     private final PluginPrefs prefs;
 
     RhythmSettings(PluginPrefs prefs) {
@@ -368,6 +373,22 @@ final class RhythmSettings {
         prefs.set("note_style", style.name());
     }
 
+    HitEffectStyle hitEffectStyle() {
+        String v = prefs.get("hit_effect_style", null);
+        if (v == null) {
+            return HitEffectStyle.RIPPLE;
+        }
+        try {
+            return HitEffectStyle.valueOf(v.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return HitEffectStyle.RIPPLE;
+        }
+    }
+
+    void setHitEffectStyle(HitEffectStyle style) {
+        prefs.set("hit_effect_style", style.name());
+    }
+
     boolean antiAliasing() {
         return prefs.getBoolean("anti_aliasing", true);
     }
@@ -523,6 +544,7 @@ final class RhythmSettings {
         setGameHorizontalAnchor(HorizontalAnchor.CENTER);
         setSongListStyle(SongListStyle.CAROUSEL);
         setNoteStyle(NoteStyle.RING);
+        setHitEffectStyle(HitEffectStyle.RIPPLE);
         setAntiAliasing(true);
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);
