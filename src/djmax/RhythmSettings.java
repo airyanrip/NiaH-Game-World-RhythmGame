@@ -135,6 +135,29 @@ final class RhythmSettings {
         prefs.set("playback_speed_pct", (int) Math.round(clamp(v, 0.5, 2.0) * 100));
     }
 
+    /** A quick Hub-side toggle for "노트 속도 빠르게 시작" — picked per song right before Play,
+     *  the same way practice mode/side notes/auto-play already are, rather than a slider buried in
+     *  Settings. Takes over from {@link #playbackSpeed} at a fixed {@link
+     *  #FAST_NOTE_SPEED_MULTIPLIER} while on; {@link #playbackSpeed} still applies as-is when off. */
+    static final double FAST_NOTE_SPEED_MULTIPLIER = 1.5;
+
+    boolean fastNoteSpeedEnabled() {
+        return prefs.getBoolean("fast_note_speed_enabled", false);
+    }
+
+    void setFastNoteSpeedEnabled(boolean on) {
+        prefs.set("fast_note_speed_enabled", on);
+    }
+
+    /** What {@link RhythmPanel} should actually resample the audio (and rescale the chart's note
+     *  timings — see {@link Chart#withSpeed}) to: the fast-start preset when the Hub toggle is on,
+     *  otherwise whatever {@link #playbackSpeed} says (1.0 by default, since nothing else sets it
+     *  yet — reading through to it here rather than hardcoding 1.0 means a future Settings slider
+     *  for it would combine with this toggle for free). */
+    double effectivePlaybackSpeed() {
+        return fastNoteSpeedEnabled() ? FAST_NOTE_SPEED_MULTIPLIER : playbackSpeed();
+    }
+
     // ── difficulty (per song, not global — picked in the Hub next to the song list) ─────────
     Difficulty songDifficulty(String songFileName) {
         return Difficulty.fromName(prefs.get(songDifficultyKey(songFileName), null), Difficulty.NORMAL);
