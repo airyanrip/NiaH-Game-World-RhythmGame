@@ -2123,12 +2123,19 @@ public final class RhythmPanel extends JPanel {
 
     /** A soft, screen-wide flash at the judge line on a PERFECT hit, lingering and fading out
      *  rather than popping and vanishing — approved via draft mockup (Downloads\꼬미_니아모드\
-     *  draft_perfect_flash_*.png). The band's height only shrinks a little as it fades (from
-     *  {@code exp(-3.5t)} decay) — most of the falloff is in alpha, not size — so the afterglow
-     *  reads as actually lingering at that spot, not just the peak flash quietly shrinking away.
-     *  A brief white-hot radial core rides on top for the first half of the effect, for the
-     *  "섬광" (flash) part; past that it's just the fading colored band, the "이펙트를 더 남기고"
-     *  (leftover effect) part. */
+     *  draft_perfect_flash_*.png), then toned down and de-edged after "너무 눈부시고 경계선도
+     *  부자연스럽게 끊겨 보입니다": the first version filled a plain rectangle with a radial
+     *  gradient, so the glow got hard-clipped at the rectangle's top/bottom edge well before the
+     *  gradient itself had actually faded to transparent there — a visible seam, not a soft fade.
+     *  Drawing an actual ellipse (a circle stretched wide via a temporary scale transform) instead
+     *  means the shape's own boundary IS where the gradient reaches zero, in every direction, so
+     *  there's no edge left to look unnatural. Peak brightness also came down a good deal (alphas
+     *  roughly halved) per "너무 눈부시다". The band's height only shrinks a little as it fades
+     *  (from {@code exp(-3.5t)} decay) — most of the falloff is in alpha, not size — so the
+     *  afterglow reads as actually lingering at that spot, not just the peak flash shrinking away.
+     *  A dim white-hot core rides on top for the first half of the effect, for the "섬광" (flash)
+     *  part; past that it's just the fading colored glow, the "이펙트를 더 남기고" (leftover
+     *  effect) part. */
     private void paintPerfectFlash(Graphics2D g, int panelWidth, long nowWall) {
         for (Effect e : effects) {
             if (e.kind() != EffectKind.PERFECT_FLASH) continue;
@@ -2136,28 +2143,43 @@ public final class RhythmPanel extends JPanel {
             if (age > PERFECT_FLASH_MS) continue;
             double t = age / (double) PERFECT_FLASH_MS;
             double intensity = Math.exp(-3.5 * t);
-            int bandHalfHeight = (int) Math.round(50 + 40 * intensity);
-            int glowAlpha = (int) Math.round(220 * intensity);
+            double bandHalfHeight = 46 + 30 * intensity;
+            double bandHalfWidth = panelWidth * 0.68; // reaches a bit past the edges so the visible
+                                                        // glow itself fades out approaching them,
+                                                        // rather than being cut off by the panel edge
+            int glowAlpha = (int) Math.round(120 * intensity); // was 220 — much less "눈부시다"
             Color base = e.color();
             Paint old = g.getPaint();
-            g.setPaint(new GradientPaint(0, JUDGE_Y - bandHalfHeight, withAlpha(base, 0),
-                    0, JUDGE_Y, withAlpha(base, glowAlpha)));
-            g.fillRect(0, JUDGE_Y - bandHalfHeight, panelWidth, bandHalfHeight);
-            g.setPaint(new GradientPaint(0, JUDGE_Y, withAlpha(base, glowAlpha),
-                    0, JUDGE_Y + bandHalfHeight, withAlpha(base, 0)));
-            g.fillRect(0, JUDGE_Y, panelWidth, bandHalfHeight);
-            g.setPaint(old);
+
+            fillSoftEllipse(g, panelWidth / 2.0, JUDGE_Y, bandHalfWidth, bandHalfHeight,
+                    withAlpha(base, glowAlpha));
 
             if (intensity > 0.5) {
                 float coreAlpha = (float) Math.min(1.0, (intensity - 0.5) * 2);
-                Paint corePaint = new RadialGradientPaint(new Point2D.Float(panelWidth / 2f, JUDGE_Y),
-                        panelWidth * 0.55f, new float[]{0f, 1f},
-                        new Color[]{withAlpha(Color.WHITE, (int) (180 * coreAlpha)), withAlpha(Color.WHITE, 0)});
-                g.setPaint(corePaint);
-                g.fillRect(0, JUDGE_Y - bandHalfHeight, panelWidth, bandHalfHeight * 2);
-                g.setPaint(old);
+                fillSoftEllipse(g, panelWidth / 2.0, JUDGE_Y, bandHalfWidth * 0.7, bandHalfHeight * 0.6,
+                        withAlpha(Color.WHITE, (int) (90 * coreAlpha))); // was 180 — much less "눈부시다"
             }
+            g.setPaint(old);
         }
+    }
+
+    /** Fills an ellipse ({@code halfWidth} x {@code halfHeight} around {@code cx,cy}) with a
+     *  radial gradient from {@code peakColor} at the center down to fully transparent right at
+     *  the ellipse's own edge — drawn as a circle under a temporary scale transform rather than a
+     *  literal {@link java.awt.geom.Ellipse2D}, since {@link RadialGradientPaint} is always
+     *  circular; stretching the whole coordinate space (draw + paint together) is what turns that
+     *  circle into a wide ellipse without the gradient and the fill shape ever disagreeing about
+     *  where "zero" is — which is exactly what caused the hard edge this replaces. */
+    private static void fillSoftEllipse(Graphics2D g, double cx, double cy, double halfWidth, double halfHeight,
+            Color peakColor) {
+        java.awt.geom.AffineTransform oldT = g.getTransform();
+        g.translate(cx, cy);
+        g.scale(halfWidth / halfHeight, 1.0);
+        g.setPaint(new RadialGradientPaint(new Point2D.Float(0, 0), (float) halfHeight,
+                new float[]{0f, 1f}, new Color[]{peakColor, withAlpha(peakColor, 0)}));
+        g.fillOval((int) Math.round(-halfHeight), (int) Math.round(-halfHeight),
+                (int) Math.round(halfHeight * 2), (int) Math.round(halfHeight * 2));
+        g.setTransform(oldT);
     }
 
     private static long ageMs(Effect e, long nowWall) {
