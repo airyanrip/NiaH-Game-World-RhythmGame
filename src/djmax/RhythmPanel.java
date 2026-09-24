@@ -86,6 +86,13 @@ public final class RhythmPanel extends JPanel {
     // A PERFECT hit's screen-wide judge-line flash + lingering afterglow — much longer than the
     // other feedback effects since the whole point is that it stays a while, not just pops.
     private static final long PERFECT_FLASH_MS = 650;
+    // Screen shake — a quick damped wiggle applied to the whole play field's render transform (see
+    // shakeOffset/paintComponent), not drawn like the other effects here. Short and fast so it
+    // reads as a snap/impact rather than a wobble; "약간 흔들리는" — kept subtle via each trigger's
+    // own strength (PERFECT_SHAKE_STRENGTH < BREAK_SHAKE_STRENGTH) rather than a long duration.
+    private static final long SHAKE_MS = 220;
+    private static final float PERFECT_SHAKE_STRENGTH = 0.35f;
+    private static final float BREAK_SHAKE_STRENGTH = 1f;
     private static final long COMBO_PULSE_MS = 160;
     private static final long MILESTONE_MS = 700;
 
@@ -199,7 +206,7 @@ public final class RhythmPanel extends JPanel {
     private int feverLevel = 0;
     private long feverBannerUntil = 0;
 
-    private enum EffectKind { LANE_FLASH, HIT_EFFECT, MISS_FLASH, PERFECT_FLASH }
+    private enum EffectKind { LANE_FLASH, HIT_EFFECT, MISS_FLASH, PERFECT_FLASH, SCREEN_SHAKE }
     /** {@code strength} scales a HIT_EFFECT's size/ring count — 1.0 for PERFECT, tapering down
      *  for GREAT/GOOD, so nailing the timing reads as visibly bigger than a scrappy press, not just
      *  a different color. Unused (always 1) for LANE_FLASH/MISS_FLASH. */
@@ -838,6 +845,7 @@ public final class RhythmPanel extends JPanel {
                 if (settings.perfectFlashEnabled()) {
                     effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
                 }
+                effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, PERFECT_SHAKE_STRENGTH));
             }
             case "GREAT" -> sfx.playGreat();
             default -> sfx.playGood();
@@ -1017,6 +1025,7 @@ public final class RhythmPanel extends JPanel {
         lastJudgeText = "BREAK";
         lastJudgeUntil = nowWall + 400;
         effects.add(new Effect(nowWall, n.lane, new Color(255, 80, 80), EffectKind.MISS_FLASH, 1f));
+        effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, BREAK_SHAKE_STRENGTH));
         accuracyCount++;
         damageHealth(healthLoss);
     }
@@ -1285,10 +1294,11 @@ public final class RhythmPanel extends JPanel {
             java.util.logging.Logger.getLogger("djmax").warning("side info card paint failed: " + ex);
         }
 
-        g.translate(renderOffsetX, renderOffsetY);
+        long nowWall = System.currentTimeMillis();
+        Point shake = shakeOffset(nowWall);
+        g.translate(renderOffsetX + shake.x, renderOffsetY + shake.y);
         g.scale(renderScale, renderScale);
         int panelWidth = LANES * LANE_WIDTH;
-        long nowWall = System.currentTimeMillis();
 
         if (!practiceMode) {
             paintHealthBars(g);
@@ -2173,6 +2183,11 @@ public final class RhythmPanel extends JPanel {
             long age = ageMs(e, nowWall);
             if (age > MISS_FLASH_MS) continue;
             float alpha = (float) (1.0 - age / (double) MISS_FLASH_MS);
+            // A quick, full-screen red flash (붉은 섬광) on top of the original thin border — falls
+            // off faster than linear (squared) so it reads as a sharp punch, not a slow fade.
+            int fillAlpha = (int) Math.round(85 * (alpha * alpha));
+            g.setColor(withAlpha(new Color(255, 40, 40), fillAlpha));
+            g.fillRect(0, 0, panelWidth, PANEL_HEIGHT);
             g.setColor(withAlpha(e.color(), (int) (130 * alpha)));
             g.setStroke(new BasicStroke(6f));
             g.drawRect(2, 2, panelWidth - 4, PANEL_HEIGHT - 4);
@@ -2254,7 +2269,29 @@ public final class RhythmPanel extends JPanel {
                     ? HIT_BURST_MS : HIT_RIPPLE_MS;
             case MISS_FLASH -> MISS_FLASH_MS;
             case PERFECT_FLASH -> PERFECT_FLASH_MS;
+            case SCREEN_SHAKE -> SHAKE_MS;
         };
+    }
+
+    /** Sums every still-active SCREEN_SHAKE effect into one (dx, dy) offset for the play field's
+     *  render transform — a fast-decaying damped oscillation ({@code exp(-6t)}) so it reads as a
+     *  snap rather than a lingering wobble. {@code startedAtMs} doubles as a cheap per-effect phase
+     *  seed so a PERFECT shake landing mid-BREAK-shake (or vice versa) doesn't just add two
+     *  perfectly in-sync sine waves. */
+    private Point shakeOffset(long nowWall) {
+        double dx = 0, dy = 0;
+        for (Effect e : effects) {
+            if (e.kind() != EffectKind.SCREEN_SHAKE) continue;
+            long age = ageMs(e, nowWall);
+            if (age > SHAKE_MS) continue;
+            double t = age / (double) SHAKE_MS;
+            double decay = Math.exp(-6.0 * t);
+            double phase = (e.startedAtMs() % 1000) * 0.01;
+            double amp = 7.0 * e.strength();
+            dx += Math.sin(age * 0.09 + phase) * amp * decay;
+            dy += Math.cos(age * 0.12 + phase * 1.7) * amp * decay * 0.6;
+        }
+        return new Point((int) Math.round(dx), (int) Math.round(dy));
     }
 
     private static Color withAlpha(Color c, int alpha) {
