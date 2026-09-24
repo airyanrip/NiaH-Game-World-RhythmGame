@@ -92,6 +92,8 @@ enum Lang {
             Map.entry("settings.sideInfoPanel", new String[]{"곡 정보 카드 (빈 공간)", "Song info card (side margin)", "曲情報カード（余白部分）", "曲目信息卡（侧边空白）"}),
             Map.entry("settings.sideInfoPanel.opacity", new String[]{"곡 정보 카드 투명도", "Song info card opacity", "曲情報カードの不透明度", "曲目信息卡不透明度"}),
             Map.entry("settings.perfectFlash", new String[]{"PERFECT 섬광 효과", "PERFECT flash effect", "PERFECTフラッシュ効果", "PERFECT闪光效果"}),
+            Map.entry("settings.screenShake", new String[]{"화면 흔들림 효과", "Screen shake effect", "画面振動効果", "画面震动效果"}),
+            Map.entry("settings.screenFlash", new String[]{"BREAK 섬광 효과", "BREAK flash effect", "BREAKフラッシュ効果", "BREAK闪光效果"}),
             Map.entry("settings.fpsLimit", new String[]{"초당 프레임 제한", "Frame rate limit", "フレームレート制限", "帧率限制"}),
             Map.entry("settings.colorVision", new String[]{"색각 보정", "Color vision", "色覚補正", "色觉校正"}),
             Map.entry("settings.colorVision.normal", new String[]{"보통", "Normal", "標準", "普通"}),

@@ -471,6 +471,25 @@ final class RhythmSettings {
         prefs.set("perfect_flash_enabled", on);
     }
 
+    // ── screen shake (PERFECT/BREAK — RhythmPanel's SCREEN_SHAKE effect) — on by default ──────────
+    boolean screenShakeEnabled() {
+        return prefs.getBoolean("screen_shake_enabled", true);
+    }
+
+    void setScreenShakeEnabled(boolean on) {
+        prefs.set("screen_shake_enabled", on);
+    }
+
+    // ── the full-screen red flash on BREAK (RhythmPanel#paintMissFlash) — on by default. Separate
+    // from perfectFlashEnabled above, which only gates the PERFECT judge-line glow. ────────────────
+    boolean screenFlashEnabled() {
+        return prefs.getBoolean("screen_flash_enabled", true);
+    }
+
+    void setScreenFlashEnabled(boolean on) {
+        prefs.set("screen_flash_enabled", on);
+    }
+
     int fpsLimit() {
         int v = prefs.getInt("fps_limit", 60);
         return switch (v) {
@@ -592,6 +611,8 @@ final class RhythmSettings {
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);
         setPerfectFlashEnabled(true);
+        setScreenShakeEnabled(true);
+        setScreenFlashEnabled(true);
         setFpsLimit(60);
         setColorVision(ColorVision.NORMAL);
         setLanguage(Lang.KO);

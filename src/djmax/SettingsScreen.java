@@ -389,6 +389,12 @@ final class SettingsScreen {
         JComboBox<String> perfectFlashCombo = onOffCombo(settings, settings.perfectFlashEnabled());
         pending.add(() -> settings.setPerfectFlashEnabled(isOn(perfectFlashCombo)));
 
+        JComboBox<String> screenShakeCombo = onOffCombo(settings, settings.screenShakeEnabled());
+        pending.add(() -> settings.setScreenShakeEnabled(isOn(screenShakeCombo)));
+
+        JComboBox<String> screenFlashCombo = onOffCombo(settings, settings.screenFlashEnabled());
+        pending.add(() -> settings.setScreenFlashEnabled(isOn(screenFlashCombo)));
+
         JComboBox<String> fpsCombo = styledCombo("30", "60", "120", "144");
         fpsCombo.setSelectedItem(String.valueOf(settings.fpsLimit()));
         pending.add(() -> settings.setFpsLimit(Integer.parseInt((String) fpsCombo.getSelectedItem())));
@@ -417,6 +423,8 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel"), sideInfoCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel.opacity"), sideInfoOpacityValue));
         tab.add(row(Lang.t(settings, "settings.perfectFlash"), perfectFlashCombo));
+        tab.add(row(Lang.t(settings, "settings.screenShake"), screenShakeCombo));
+        tab.add(row(Lang.t(settings, "settings.screenFlash"), screenFlashCombo));
         tab.add(row(Lang.t(settings, "settings.fpsLimit"), fpsCombo));
         tab.add(row(Lang.t(settings, "settings.colorVision"), cvCombo));
         return tab;

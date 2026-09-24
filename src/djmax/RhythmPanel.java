@@ -853,7 +853,9 @@ public final class RhythmPanel extends JPanel {
                 if (settings.perfectFlashEnabled()) {
                     effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
                 }
-                effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, PERFECT_SHAKE_STRENGTH));
+                if (settings.screenShakeEnabled()) {
+                    effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, PERFECT_SHAKE_STRENGTH));
+                }
             }
             case "GREAT" -> sfx.playGreat();
             default -> sfx.playGood();
@@ -1033,7 +1035,9 @@ public final class RhythmPanel extends JPanel {
         lastJudgeText = "BREAK";
         lastJudgeUntil = nowWall + 400;
         effects.add(new Effect(nowWall, n.lane, new Color(255, 80, 80), EffectKind.MISS_FLASH, 1f));
-        effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, BREAK_SHAKE_STRENGTH));
+        if (settings.screenShakeEnabled()) {
+            effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, BREAK_SHAKE_STRENGTH));
+        }
         accuracyCount++;
         damageHealth(healthLoss);
     }
@@ -2630,11 +2634,13 @@ public final class RhythmPanel extends JPanel {
             long age = ageMs(e, nowWall);
             if (age > MISS_FLASH_MS) continue;
             float alpha = (float) (1.0 - age / (double) MISS_FLASH_MS);
-            // A quick, full-screen red flash (붉은 섬광) on top of the original thin border — falls
-            // off faster than linear (squared) so it reads as a sharp punch, not a slow fade.
-            int fillAlpha = (int) Math.round(85 * (alpha * alpha));
-            g.setColor(withAlpha(new Color(255, 40, 40), fillAlpha));
-            g.fillRect(0, 0, panelWidth, PANEL_HEIGHT);
+            if (settings.screenFlashEnabled()) {
+                // A quick, full-screen red flash (붉은 섬광) on top of the original thin border —
+                // falls off faster than linear (squared) so it reads as a sharp punch, not a slow fade.
+                int fillAlpha = (int) Math.round(85 * (alpha * alpha));
+                g.setColor(withAlpha(new Color(255, 40, 40), fillAlpha));
+                g.fillRect(0, 0, panelWidth, PANEL_HEIGHT);
+            }
             g.setColor(withAlpha(e.color(), (int) (130 * alpha)));
             g.setStroke(new BasicStroke(6f));
             g.drawRect(2, 2, panelWidth - 4, PANEL_HEIGHT - 4);
