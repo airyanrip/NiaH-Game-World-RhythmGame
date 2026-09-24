@@ -34,6 +34,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -191,6 +192,11 @@ public final class RhythmPanel extends JPanel {
     private long milestoneUntil = 0;
     private Result result;
     private double health = MAX_HEALTH;
+    // The gray "damage/heal preview" ghost trailing the health bar's real fill — see
+    // ghostHealthDisplay()'s doc for how the two fields below drive it.
+    private double healthGhostFrom = MAX_HEALTH;
+    private long healthGhostAtMs = 0;
+    private static final long HEALTH_GHOST_CATCHUP_MS = 450;
     private boolean gameOver = false;
 
     // DJMAX Respect V's FEVER gauge: fills from hits (46 normal notes, or a long note held for a
@@ -566,6 +572,8 @@ public final class RhythmPanel extends JPanel {
         result = null;
         newBest = false;
         health = MAX_HEALTH;
+        healthGhostFrom = MAX_HEALTH;
+        healthGhostAtMs = 0;
         gameOver = false;
         paused = false;
         resuming = false;
@@ -1039,10 +1047,36 @@ public final class RhythmPanel extends JPanel {
         if (practiceMode || autoPlay || gameOver || finished) {
             return;
         }
+        rebaseHealthGhost();
         health = Math.max(0, health - amount);
         if (health <= 0) {
             triggerGameOver();
         }
+    }
+
+    /** Snapshots the ghost bar's current on-screen position as the new starting point for its next
+     *  catch-up animation, right before {@code health} itself changes — see {@link
+     *  #ghostHealthDisplay}'s doc. Called from both {@link #damageHealth} and {@link #healHealth},
+     *  before either actually mutates {@code health}, so this always reads the still-old value. */
+    private void rebaseHealthGhost() {
+        long nowWall = System.currentTimeMillis();
+        healthGhostFrom = ghostHealthDisplay(nowWall);
+        healthGhostAtMs = nowWall;
+    }
+
+    /** The gray "damage/heal preview" bar's own animated value: eases from {@link #healthGhostFrom}
+     *  (wherever it was sitting when the most recently applied change was triggered — see {@link
+     *  #rebaseHealthGhost}) toward the current, already-applied {@link #health} over {@link
+     *  #HEALTH_GHOST_CATCHUP_MS}. {@link #paintOneHealthBar} draws the gray sliver as the gap
+     *  between this and the real fill — above it while healthGhostFrom hasn't caught down yet after
+     *  damage (the "just lost" sliver, fading against the dark background), or overlaid on the
+     *  freshly grown fill after a heal (a fading highlight on what was just gained) — one animation
+     *  driving both directions, since which side of {@code health} it's on falls out naturally from
+     *  whether the change was a loss or a gain. */
+    private double ghostHealthDisplay(long nowWall) {
+        double t = Math.max(0.0, Math.min(1.0, (nowWall - healthGhostAtMs) / (double) HEALTH_GHOST_CATCHUP_MS));
+        double eased = 1 - Math.pow(1 - t, 3);
+        return healthGhostFrom + (health - healthGhostFrom) * eased;
     }
 
     /** Heals the health gauge — only a PERFECT (DJMAX's "MAX"/100%) judgment calls this; GREAT and
@@ -1052,6 +1086,7 @@ public final class RhythmPanel extends JPanel {
         if (practiceMode || gameOver || finished) {
             return;
         }
+        rebaseHealthGhost();
         health = Math.min(MAX_HEALTH, health + amount);
     }
 
@@ -1301,7 +1336,7 @@ public final class RhythmPanel extends JPanel {
         int panelWidth = LANES * LANE_WIDTH;
 
         if (!practiceMode) {
-            paintHealthBars(g);
+            paintHealthBars(g, nowWall);
         }
 
         // Everything below draws exactly as it did before the health bars existed — it's just
@@ -1471,23 +1506,42 @@ public final class RhythmPanel extends JPanel {
     /** The two vertical health-gauge bars flanking the lanes, DJMAX Respect V-style: a miss or a
      *  failed hold drains it (see {@link #damageHealth}), and it never refills — hitting empty
      *  ends the run immediately, in {@link #triggerGameOver()}. */
-    private void paintHealthBars(Graphics2D g) {
+    private void paintHealthBars(Graphics2D g, long nowWall) {
         int top = 20;
         int barH = PANEL_HEIGHT - 40;
         double frac = Math.max(0, Math.min(1, health / MAX_HEALTH));
         int filledH = (int) Math.round(barH * frac);
+        double ghostFrac = Math.max(0, Math.min(1, ghostHealthDisplay(nowWall) / MAX_HEALTH));
+        int ghostFilledH = (int) Math.round(barH * ghostFrac);
         Color fill = frac <= 0.25 ? new Color(255, 70, 70) : new Color(255, 95, 180);
-        paintOneHealthBar(g, 6, top, barH, filledH, fill);
-        paintOneHealthBar(g, TOTAL_WIDTH - HEALTH_BAR_WIDTH - 6, top, barH, filledH, fill);
+        paintOneHealthBar(g, 6, top, barH, filledH, ghostFilledH, fill);
+        paintOneHealthBar(g, TOTAL_WIDTH - HEALTH_BAR_WIDTH - 6, top, barH, filledH, ghostFilledH, fill);
     }
 
-    private void paintOneHealthBar(Graphics2D g, int x, int top, int barH, int filledH, Color fill) {
+    /** {@code ghostFilledH} draws as a gray sliver on top of the real fill, in the gap between the
+     *  two — see {@link #ghostHealthDisplay}'s doc for why the same sliver reads correctly as
+     *  either a "just lost" trail (damage) or a fading "just gained" highlight (heal), depending on
+     *  which side of {@code filledH} it currently falls on. Clipped to the bar's own rounded outline
+     *  so both fills stay plain rects internally (no per-sliver corner-radius math) without ever
+     *  drawing outside the bar's shape. */
+    private void paintOneHealthBar(Graphics2D g, int x, int top, int barH, int filledH, int ghostFilledH, Color fill) {
         g.setColor(new Color(38, 20, 34));
         g.fillRoundRect(x, top, HEALTH_BAR_WIDTH, barH, 10, 10);
+
+        Shape oldClip = g.getClip();
+        g.clip(new RoundRectangle2D.Float(x, top, HEALTH_BAR_WIDTH, barH, 10, 10));
         if (filledH > 0) {
             g.setColor(fill);
-            g.fillRoundRect(x, top + (barH - filledH), HEALTH_BAR_WIDTH, filledH, 10, 10);
+            g.fillRect(x, top + (barH - filledH), HEALTH_BAR_WIDTH, filledH);
         }
+        if (ghostFilledH != filledH) {
+            int hiTop = top + barH - Math.max(filledH, ghostFilledH);
+            int loBottom = top + barH - Math.min(filledH, ghostFilledH);
+            g.setColor(new Color(225, 225, 232, 165));
+            g.fillRect(x, hiTop, HEALTH_BAR_WIDTH, loBottom - hiTop);
+        }
+        g.setClip(oldClip);
+
         g.setColor(new Color(255, 255, 255, 150));
         g.setStroke(new BasicStroke(1.5f));
         g.drawRoundRect(x, top, HEALTH_BAR_WIDTH, barH, 10, 10);
