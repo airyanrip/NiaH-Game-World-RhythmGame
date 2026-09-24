@@ -1312,6 +1312,7 @@ public final class RhythmPanel extends JPanel {
         lane.clipRect(0, 0, panelWidth, PANEL_HEIGHT);
 
         paintLaneBackgrounds(lane, panelWidth);
+        paintFeverShimmer(lane, panelWidth, nowWall);
         paintDirectionalArrows(lane, panelWidth);
         paintArenaFrame(lane, panelWidth);
         paintLaneFlashes(lane, nowWall);
@@ -2048,6 +2049,34 @@ public final class RhythmPanel extends JPanel {
             g.setColor(Color.WHITE);
             g.drawString("FEVER Lv." + feverLevel, x + barW - 62, y + barH + 13);
         }
+    }
+
+    /** A continuous, very pale purple ambient wash while FEVER is active (any {@link #feverLevel}
+     *  {@code > 0}) — "옅은 보라색으로 일렁이는 느낌": a slow breathing base tint plus two soft
+     *  drifting glows (reusing {@link #fillSoftEllipse}) whose positions and alpha wander on their
+     *  own independent sine cycles, so it reads as a gentle undulation rather than a flat static
+     *  tint or a sharp pulse. Drawn right after the lane backgrounds — under the arena frame, judge
+     *  line, notes and every other effect — so it never dims or occludes anything gameplay-relevant
+     *  on top of it; alpha values are kept low ("옅은") for the same reason. */
+    private void paintFeverShimmer(Graphics2D g, int panelWidth, long nowWall) {
+        if (feverLevel <= 0) {
+            return;
+        }
+        double t = nowWall / 1000.0;
+        double breathe = 0.5 + 0.5 * Math.sin(t * 1.1);
+        g.setColor(withAlpha(new Color(170, 110, 255), (int) Math.round(10 + 8 * breathe)));
+        g.fillRect(0, 0, panelWidth, PANEL_HEIGHT);
+
+        Paint old = g.getPaint();
+        for (int i = 0; i < 2; i++) {
+            double phase = i * 2.6;
+            double cx = panelWidth * (0.5 + 0.35 * Math.sin(t * 0.35 + phase));
+            double cy = PANEL_HEIGHT * (0.45 + 0.3 * Math.cos(t * 0.27 + phase * 1.3));
+            double glowAlpha = 10 + 7 * (0.5 + 0.5 * Math.sin(t * 0.6 + phase));
+            fillSoftEllipse(g, cx, cy, panelWidth * 0.55, PANEL_HEIGHT * 0.45,
+                    withAlpha(new Color(190, 140, 255), (int) Math.round(glowAlpha)));
+        }
+        g.setPaint(old);
     }
 
     /** A key press's lane flash: a soft vertical light beam centered on the judgment line, brightest
