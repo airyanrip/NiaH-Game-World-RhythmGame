@@ -1311,11 +1311,21 @@ public final class RhythmPanel extends JPanel {
         lane.translate(LANE_AREA_X, 0);
         lane.clipRect(0, 0, panelWidth, PANEL_HEIGHT);
 
-        paintLaneBackgrounds(lane, panelWidth);
+        boolean perspective = settings.laneLayout() == RhythmSettings.LaneLayout.PERSPECTIVE;
+        if (perspective) {
+            paintLaneBackgroundsPerspective(lane, panelWidth);
+        } else {
+            paintLaneBackgrounds(lane, panelWidth);
+        }
         paintFeverShimmer(lane, panelWidth, nowWall);
         paintDirectionalArrows(lane, panelWidth);
-        paintArenaFrame(lane, panelWidth);
-        paintLaneFlashes(lane, nowWall);
+        if (perspective) {
+            paintArenaFramePerspective(lane, panelWidth);
+            paintLaneFlashesPerspective(lane, panelWidth, nowWall);
+        } else {
+            paintArenaFrame(lane, panelWidth);
+            paintLaneFlashes(lane, nowWall);
+        }
         paintJudgeLine(lane, panelWidth);
 
         if (started) {
@@ -1336,21 +1346,11 @@ public final class RhythmPanel extends JPanel {
                 if (n.kind != Note.Kind.SIDE) continue;
                 if (n.isHold()) {
                     if (!n.tailJudged) {
-                        paintNoteSafely(() -> paintSideHoldNote(lane, n, now));
-                    }
-                    continue;
-                }
-                if (n.judged) continue;
-                double y = JUDGE_Y - (n.timeMs - now) * pixelsPerMs;
-                if (y < -40 || y > PANEL_HEIGHT + 40) continue;
-                paintNoteSafely(() -> paintSideNote(lane, n, y));
-            }
-            for (int i = chart.notes.size() - 1; i >= 0; i--) {
-                Note n = chart.notes.get(i);
-                if (n.kind == Note.Kind.SIDE) continue;
-                if (n.isHold()) {
-                    if (!n.tailJudged) {
-                        paintNoteSafely(() -> paintHoldNote(lane, n, now));
+                        if (perspective) {
+                            paintNoteSafely(() -> paintSideHoldNotePerspective(lane, panelWidth, n, now));
+                        } else {
+                            paintNoteSafely(() -> paintSideHoldNote(lane, n, now));
+                        }
                     }
                     continue;
                 }
@@ -1358,7 +1358,36 @@ public final class RhythmPanel extends JPanel {
                 long dtMs = n.timeMs - now;
                 double y = JUDGE_Y - dtMs * pixelsPerMs;
                 if (y < -40 || y > PANEL_HEIGHT + 40) continue;
-                paintNoteSafely(() -> paintNote(lane, n, y));
+                if (perspective) {
+                    double p = perspectiveP(dtMs);
+                    paintNoteSafely(() -> paintSideNotePerspective(lane, panelWidth, n, p));
+                } else {
+                    paintNoteSafely(() -> paintSideNote(lane, n, y));
+                }
+            }
+            for (int i = chart.notes.size() - 1; i >= 0; i--) {
+                Note n = chart.notes.get(i);
+                if (n.kind == Note.Kind.SIDE) continue;
+                if (n.isHold()) {
+                    if (!n.tailJudged) {
+                        if (perspective) {
+                            paintNoteSafely(() -> paintHoldNotePerspective(lane, panelWidth, n, now));
+                        } else {
+                            paintNoteSafely(() -> paintHoldNote(lane, n, now));
+                        }
+                    }
+                    continue;
+                }
+                if (n.judged) continue;
+                long dtMs = n.timeMs - now;
+                double y = JUDGE_Y - dtMs * pixelsPerMs;
+                if (y < -40 || y > PANEL_HEIGHT + 40) continue;
+                if (perspective) {
+                    double p = perspectiveP(dtMs);
+                    paintNoteSafely(() -> paintNotePerspective(lane, panelWidth, n, p));
+                } else {
+                    paintNoteSafely(() -> paintNote(lane, n, y));
+                }
             }
         }
 
@@ -1464,6 +1493,128 @@ public final class RhythmPanel extends JPanel {
         g.drawRoundRect(x, top, HEALTH_BAR_WIDTH, barH, 10, 10);
     }
 
+    // ── perspective ("입체 원근형" / RhythmSettings.LaneLayout.PERSPECTIVE) lane geometry ─────────
+    // A Project SEKAI-style tilted floor: a trapezoid narrow at the far horizon (PERS_Y_TOP) and
+    // exactly panelWidth wide at the judge line (JUDGE_Y) — pinning the bottom edge to the flat
+    // view's own JUDGE_Y/panelWidth means every effect that already draws at the judge line (hit
+    // ripple/burst, PERFECT/MISS flash, FEVER shimmer, lane key labels) lines up correctly with
+    // zero changes in either mode; only the floor backdrop and the falling notes themselves need
+    // mode-aware drawing (see the *Perspective paint methods below and their FLAT-mode callers in
+    // paintComponent).
+    //
+    // Depth is parameterized as p in [0,1]: p=0 is the far horizon (PERS_Y_TOP, PERS_WIDTH_TOP_FRACTION
+    // of panelWidth), p=1 is the judge line. persInvDepth(p) is a real pinhole-camera "1/z" falloff
+    // (see its own doc) — using the SAME curve for screen-Y, floor width, and note scale keeps the
+    // projection self-consistent (apparent size/position both track 1/distance together), and
+    // algebraically it also means every lane's left/right edge is a straight line in screen space
+    // (width becomes linear in y once p is eliminated), so the floor/lane cells below are plain
+    // straight-edged polygons — no curve-fitting needed to draw them.
+    private static final double PERS_Y_TOP = 70;
+    private static final double PERS_WIDTH_TOP_FRACTION = 0.16;
+    private static final double PERS_SCALE_TOP = 0.4;
+    private static final double PERS_SCALE_BOTTOM = 1.0;
+
+    /** Depth progress p in [0,1] for a note {@code dtMs} away from being due, clamped — the same
+     *  pixel span the flat view's own visible window uses ({@code JUDGE_Y + 40}), so switching
+     *  layouts doesn't change how much advance reaction time a note is actually visible for. */
+    private double perspectiveP(long dtMs) {
+        double traveled = dtMs * pixelsPerMs;
+        double span = JUDGE_Y + 40;
+        return Math.max(0.0, Math.min(1.0, 1.0 - traveled / span));
+    }
+
+    /** Normalized inverse-depth: a real "1/z" pinhole-camera falloff (z decreasing linearly with p
+     *  from a far to a near plane), so equal steps in p — equal steps in note flight time — bunch
+     *  up near the horizon and spread out fast near the judge line, the classic "rushing toward the
+     *  camera" perspective feel, rather than a flat linear (equal on-screen spacing) fall. */
+    private static double persInvDepth(double p) {
+        double zFar = 5.0, zNear = 1.0;
+        double z = zFar + p * (zNear - zFar);
+        double invZ = 1.0 / z, invZFar = 1.0 / zFar, invZNear = 1.0 / zNear;
+        return (invZ - invZFar) / (invZNear - invZFar);
+    }
+
+    private double persScreenY(double p) {
+        return PERS_Y_TOP + (JUDGE_Y - PERS_Y_TOP) * persInvDepth(p);
+    }
+
+    private double persFloorHalfWidth(int panelWidth, double p) {
+        double wTop = panelWidth * PERS_WIDTH_TOP_FRACTION;
+        return (wTop + (panelWidth - wTop) * persInvDepth(p)) / 2.0;
+    }
+
+    private double persNoteScale(double p) {
+        return PERS_SCALE_TOP + (PERS_SCALE_BOTTOM - PERS_SCALE_TOP) * persInvDepth(p);
+    }
+
+    private double persLaneWidth(int panelWidth, double p) {
+        return (persFloorHalfWidth(panelWidth, p) * 2) / LANES;
+    }
+
+    private double persLaneCenterX(int panelWidth, int laneIdx, double p) {
+        double laneW = persLaneWidth(panelWidth, p);
+        double leftEdge = panelWidth / 2.0 - persFloorHalfWidth(panelWidth, p);
+        return leftEdge + laneW * (laneIdx + 0.5);
+    }
+
+    /** The whole floor's outline (all 4 lanes together), far edge to judge line — reused for the
+     *  background fill and the perspective arena frame. */
+    private Path2D.Double persFloorOutline(int panelWidth) {
+        Path2D.Double path = new Path2D.Double();
+        path.moveTo(panelWidth / 2.0 - persFloorHalfWidth(panelWidth, 0), persScreenY(0));
+        path.lineTo(panelWidth / 2.0 + persFloorHalfWidth(panelWidth, 0), persScreenY(0));
+        path.lineTo(panelWidth / 2.0 + persFloorHalfWidth(panelWidth, 1), persScreenY(1));
+        path.lineTo(panelWidth / 2.0 - persFloorHalfWidth(panelWidth, 1), persScreenY(1));
+        path.closePath();
+        return path;
+    }
+
+    /** One lane's own trapezoid cell between depths {@code p0} and {@code p1} (p0 nearer the
+     *  horizon, p1 nearer the judge line) — used for the lane background tint and the perspective
+     *  lane-press flash. */
+    private Path2D.Double persLaneCell(int panelWidth, int laneIdx, double p0, double p1) {
+        return persTaperedBand(panelWidth, laneIdx, p0, 0.5, p1, 0.5);
+    }
+
+    /** A quad spanning depths {@code p0}..{@code p1} in lane {@code laneIdx}, each end's half-width
+     *  given as a fraction of that depth's full lane width — the general shape a falling lane
+     *  hold's body and every per-lane cell above are built from. {@code halfWidthFrac0/1} = 0.5
+     *  means "the full lane width at that end"; a hold note's narrower bar uses a smaller fraction
+     *  instead. (Side notes/holds span every lane at once, so they build their own full-width quad
+     *  directly rather than going through this per-lane helper — see paintSideNotePerspective/
+     *  paintSideHoldNotePerspective.) */
+    private Path2D.Double persTaperedBand(int panelWidth, int laneIdx,
+            double p0, double halfWidthFrac0, double p1, double halfWidthFrac1) {
+        double c0 = persLaneCenterX(panelWidth, laneIdx, p0);
+        double c1 = persLaneCenterX(panelWidth, laneIdx, p1);
+        double h0 = persLaneWidth(panelWidth, p0) * halfWidthFrac0;
+        double h1 = persLaneWidth(panelWidth, p1) * halfWidthFrac1;
+        double y0 = persScreenY(p0), y1 = persScreenY(p1);
+        Path2D.Double band = new Path2D.Double();
+        band.moveTo(c0 - h0, y0);
+        band.lineTo(c0 + h0, y0);
+        band.lineTo(c1 + h1, y1);
+        band.lineTo(c1 - h1, y1);
+        band.closePath();
+        return band;
+    }
+
+    /** Runs {@code paint} with a temporary scale transform centered on {@code (cx, cy)} — the
+     *  "note grows as it approaches" effect, applied around a shape drawn exactly like its flat
+     *  counterpart (same shape-drawing code, just reprojected). A no-op wrapper at scale 1.0. */
+    private void paintScaled(Graphics2D g, double cx, double cy, double scale, Runnable paint) {
+        if (Math.abs(scale - 1.0) < 1e-6) {
+            paint.run();
+            return;
+        }
+        java.awt.geom.AffineTransform oldT = g.getTransform();
+        g.translate(cx, cy);
+        g.scale(scale, scale);
+        g.translate(-cx, -cy);
+        paint.run();
+        g.setTransform(oldT);
+    }
+
     private void paintLaneBackgrounds(Graphics2D g, int panelWidth) {
         // Whichever background image just got drawn (the animated loop, or the thumbnail fallback)
         // needs to actually show through here — this used to check only `background`, so with the
@@ -1487,6 +1638,70 @@ public final class RhythmPanel extends JPanel {
         for (int lane = 1; lane < LANES; lane++) {
             g.drawLine(lane * LANE_WIDTH, 0, lane * LANE_WIDTH, PANEL_HEIGHT);
         }
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintLaneBackgrounds} — same gradient/tint/
+     *  divider idea, just traced onto the tilted trapezoid floor instead of 4 flat rectangles, plus
+     *  a horizon glow and evenly-time-spaced depth "rungs" (see {@link #persInvDepth}'s doc — their
+     *  bunched-near-the-top, spread-near-the-bottom screen spacing is the clearest perspective cue
+     *  on an otherwise-static floor). */
+    private void paintLaneBackgroundsPerspective(Graphics2D g, int panelWidth) {
+        boolean translucent = background != null || thumbnail != null;
+
+        g.setColor(new Color(10, 8, 13));
+        g.fillRect(0, 0, panelWidth, PANEL_HEIGHT);
+
+        Paint old = g.getPaint();
+        g.setPaint(new GradientPaint(0, (float) PERS_Y_TOP - 50, withAlpha(NEON_PINK, translucent ? 20 : 40),
+                0, (float) PERS_Y_TOP, withAlpha(NEON_PINK, 0)));
+        g.fillRect(0, (int) PERS_Y_TOP - 50, panelWidth, 50);
+
+        Path2D.Double floor = persFloorOutline(panelWidth);
+        Color top = new Color(30, 22, 36);
+        Color bottom = new Color(15, 11, 18);
+        if (translucent) {
+            top = withAlpha(top, 90);
+            bottom = withAlpha(bottom, 60);
+        }
+        g.setPaint(new GradientPaint(0, (float) persScreenY(0), top, 0, (float) persScreenY(1), bottom));
+        g.fill(floor);
+        g.setPaint(old);
+
+        for (int laneIdx = 0; laneIdx < LANES; laneIdx++) {
+            if (laneIdx % 2 == 0) continue; // matches paintLaneBackgrounds tinting the odd lanes darker
+            g.setColor(withAlpha(Color.BLACK, translucent ? 25 : 45));
+            g.fill(persLaneCell(panelWidth, laneIdx, 0, 1));
+        }
+
+        g.setColor(new Color(72, 55, 70));
+        g.setStroke(new BasicStroke(1.4f));
+        for (int laneIdx = 1; laneIdx < LANES; laneIdx++) {
+            double x0 = panelWidth / 2.0 - persFloorHalfWidth(panelWidth, 0) + persFloorHalfWidth(panelWidth, 0) * 2 * laneIdx / LANES;
+            double x1 = panelWidth / 2.0 - persFloorHalfWidth(panelWidth, 1) + persFloorHalfWidth(panelWidth, 1) * 2 * laneIdx / LANES;
+            g.draw(new Line2D.Double(x0, persScreenY(0), x1, persScreenY(1)));
+        }
+
+        g.setStroke(new BasicStroke(1f));
+        for (int i = 0; i <= 10; i++) {
+            double p = i / 10.0;
+            double y = persScreenY(p);
+            double halfW = persFloorHalfWidth(panelWidth, p);
+            int alpha = (int) (16 + 18 * persInvDepth(p));
+            g.setColor(withAlpha(Color.WHITE, alpha));
+            g.draw(new Line2D.Double(panelWidth / 2.0 - halfW, y, panelWidth / 2.0 + halfW, y));
+        }
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintArenaFrame} — the same glowing
+     *  double-outline, traced around the trapezoid floor instead of the panel's own rectangle. */
+    private void paintArenaFramePerspective(Graphics2D g, int panelWidth) {
+        Path2D.Double floor = persFloorOutline(panelWidth);
+        g.setColor(withAlpha(NEON_PINK, 35));
+        g.setStroke(new BasicStroke(8f));
+        g.draw(floor);
+        g.setColor(withAlpha(NEON_PINK, 130));
+        g.setStroke(new BasicStroke(2.5f));
+        g.draw(floor);
     }
 
     // The neon magenta accent used for the arena frame/chevrons/judgment line — per a reference
@@ -1605,16 +1820,26 @@ public final class RhythmPanel extends JPanel {
     }
 
     private void paintNote(Graphics2D g, Note n, double y) {
+        int cx = n.lane * LANE_WIDTH + LANE_WIDTH / 2;
+        paintNoteAt(g, n, cx, y, 1.0);
+    }
+
+    /** The shared shape-drawing core both {@link #paintNote} (FLAT, always scale 1.0) and the
+     *  PERSPECTIVE note-drawing loop call — same two note-style shapes, just at an explicit
+     *  center/scale instead of always the flat lane center at scale 1.0, via a temporary transform
+     *  (see {@link #paintScaled}) around whichever shape actually gets drawn. */
+    private void paintNoteAt(Graphics2D g, Note n, double cx, double cy, double scale) {
         int lane = n.lane;
-        if (settings.noteStyle() == RhythmSettings.NoteStyle.CLASSIC) {
-            int x = lane * LANE_WIDTH + 10;
-            int width = LANE_WIDTH - 20;
-            int top = (int) Math.round(y) - 14;
-            paintNoteCap(g, x, top, width, 28, 14, laneColor(lane));
-        } else {
-            int cx = lane * LANE_WIDTH + LANE_WIDTH / 2;
-            paintNoteCross(g, cx, (int) Math.round(y), NOTE_CROSS_OUTER_RADIUS, laneColor(lane));
-        }
+        paintScaled(g, cx, cy, scale, () -> {
+            if (settings.noteStyle() == RhythmSettings.NoteStyle.CLASSIC) {
+                int width = LANE_WIDTH - 20;
+                int x = (int) Math.round(cx - width / 2.0);
+                int top = (int) Math.round(cy) - 14;
+                paintNoteCap(g, x, top, width, 28, 14, laneColor(lane));
+            } else {
+                paintNoteCross(g, (int) Math.round(cx), (int) Math.round(cy), NOTE_CROSS_OUTER_RADIUS, laneColor(lane));
+            }
+        });
     }
 
     /** A long note: a body bar from head to tail, a head cap, and (once being held) a glowing body
@@ -1689,6 +1914,117 @@ public final class RhythmPanel extends JPanel {
 
         if (!n.judged || holding) {
             paintSideNote(g, n, headY);
+        }
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintNote} — same two note-style shapes via
+     *  {@link #paintNoteAt}, just centered/scaled by depth {@code p} instead of the flat lane
+     *  center at a fixed size. */
+    private void paintNotePerspective(Graphics2D g, int panelWidth, Note n, double p) {
+        double cx = persLaneCenterX(panelWidth, n.lane, p);
+        double cy = persScreenY(p);
+        paintNoteAt(g, n, cx, cy, persNoteScale(p));
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintHoldNote}: the body bar is a tapered
+     *  quad (narrow toward the tail/horizon, wide toward the head/judge line — see {@link
+     *  #persTaperedBand}) instead of a fixed-width rectangle, and the head cap is drawn via {@link
+     *  #paintNoteAt}/{@link #paintScaled} at its own depth-scaled size. Visibility is still decided
+     *  by the flat view's own head/tail Y math — purely a cutoff test, never drawn — so both
+     *  layouts stay visible for exactly the same stretch of a note's flight. */
+    private void paintHoldNotePerspective(Graphics2D g, int panelWidth, Note n, long now) {
+        boolean holding = n.holding;
+        double headYFlat = (holding || n.releasedEarly) ? JUDGE_Y : JUDGE_Y - (n.timeMs - now) * pixelsPerMs;
+        double tailYFlat = JUDGE_Y - (n.endTimeMs - now) * pixelsPerMs;
+        if (Math.max(headYFlat, tailYFlat) < -40 || Math.min(headYFlat, tailYFlat) > PANEL_HEIGHT + 40) {
+            return;
+        }
+        double pHead = (holding || n.releasedEarly) ? 1.0 : perspectiveP(n.timeMs - now);
+        double pTail = perspectiveP(n.endTimeMs - now);
+
+        boolean classic = settings.noteStyle() == RhythmSettings.NoteStyle.CLASSIC;
+        double barFrac = (classic ? (LANE_WIDTH - 20) : (NOTE_CROSS_OUTER_RADIUS + 10)) / (double) LANE_WIDTH / 2.0;
+        Path2D.Double band = persTaperedBand(panelWidth, n.lane, pTail, barFrac, pHead, barFrac);
+        Color base = laneColor(n.lane);
+        Color body = holding ? brighten(base, 0.25f) : base;
+        int alpha = holding ? 235 : 160;
+        Paint old = g.getPaint();
+        g.setPaint(new GradientPaint(0, (float) persScreenY(pTail), withAlpha(brighten(body, 0.2f), alpha),
+                0, (float) persScreenY(pHead), withAlpha(body.darker(), alpha)));
+        g.fill(band);
+        g.setPaint(old);
+        g.setColor(base.darker().darker());
+        g.setStroke(new BasicStroke(1.6f));
+        g.draw(band);
+
+        if (!n.judged || holding) {
+            if (classic) {
+                paintNotePerspective(g, panelWidth, n, pHead);
+            } else {
+                double approachT = holding ? 0.0
+                        : Math.max(0.0, Math.min(1.0, (n.timeMs - now) / (double) ARCADE_APPROACH_MS));
+                double spinAngle = holding ? arcadeSpinAngle(now - n.timeMs) : 0.0;
+                double cxHead = persLaneCenterX(panelWidth, n.lane, pHead);
+                double cyHead = persScreenY(pHead);
+                paintScaled(g, cxHead, cyHead, persNoteScale(pHead), () ->
+                        paintArcadeHoldHead(g, (int) Math.round(cxHead), (int) Math.round(cyHead),
+                                ARCADE_HOLD_OUTER_RADIUS, laneColor(n.lane), approachT, spinAngle, holding));
+            }
+        }
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintSideNote} — a single depth {@code p}
+     *  (side notes have no lane, so no scale-transform trick is needed: width/height are computed
+     *  directly at that depth via {@link #persFloorHalfWidth}/{@link #persNoteScale}, then handed
+     *  straight to the same {@link #paintNoteCap} the flat view uses). */
+    private void paintSideNotePerspective(Graphics2D g, int panelWidth, Note n, double p) {
+        double scale = persNoteScale(p);
+        double cy = persScreenY(p);
+        double halfW = persFloorHalfWidth(panelWidth, p) - 6 * scale;
+        double h = 32 * scale;
+        Color base = n.isHold() ? SIDE_NOTE_HOLD_COLOR : SIDE_NOTE_TAP_COLOR;
+        int x = (int) Math.round(panelWidth / 2.0 - halfW);
+        int width = (int) Math.round(halfW * 2);
+        int top = (int) Math.round(cy - h / 2);
+        paintNoteCap(g, x, top, width, (int) Math.round(h), (int) Math.round(16 * scale), base);
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintSideHoldNote} — the same tapered-band
+     *  treatment as {@link #paintHoldNotePerspective}, just full floor width ({@code laneIdx < 0}
+     *  in {@link #persTaperedBand}) instead of one lane. */
+    private void paintSideHoldNotePerspective(Graphics2D g, int panelWidth, Note n, long now) {
+        boolean holding = n.holding;
+        double headYFlat = (holding || n.releasedEarly) ? JUDGE_Y : JUDGE_Y - (n.timeMs - now) * pixelsPerMs;
+        double tailYFlat = JUDGE_Y - (n.endTimeMs - now) * pixelsPerMs;
+        if (Math.max(headYFlat, tailYFlat) < -40 || Math.min(headYFlat, tailYFlat) > PANEL_HEIGHT + 40) {
+            return;
+        }
+        double pHead = (holding || n.releasedEarly) ? 1.0 : perspectiveP(n.timeMs - now);
+        double pTail = perspectiveP(n.endTimeMs - now);
+
+        double halfWTail = persFloorHalfWidth(panelWidth, pTail) - 6;
+        double halfWHead = persFloorHalfWidth(panelWidth, pHead) - 6;
+        double yTail = persScreenY(pTail), yHead = persScreenY(pHead);
+        Path2D.Double band = new Path2D.Double();
+        band.moveTo(panelWidth / 2.0 - halfWTail, yTail);
+        band.lineTo(panelWidth / 2.0 + halfWTail, yTail);
+        band.lineTo(panelWidth / 2.0 + halfWHead, yHead);
+        band.lineTo(panelWidth / 2.0 - halfWHead, yHead);
+        band.closePath();
+        Color base = SIDE_NOTE_HOLD_COLOR;
+        Color body = holding ? brighten(base, 0.25f) : base;
+        int alpha = holding ? 235 : 160;
+        Paint old = g.getPaint();
+        g.setPaint(new GradientPaint(0, (float) persScreenY(pTail), withAlpha(brighten(body, 0.2f), alpha),
+                0, (float) persScreenY(pHead), withAlpha(body.darker(), alpha)));
+        g.fill(band);
+        g.setPaint(old);
+        g.setColor(base.darker().darker());
+        g.setStroke(new BasicStroke(1.6f));
+        g.draw(band);
+
+        if (!n.judged || holding) {
+            paintSideNotePerspective(g, panelWidth, n, pHead);
         }
     }
 
@@ -2105,6 +2441,34 @@ public final class RhythmPanel extends JPanel {
                             withAlpha(Color.WHITE, 0)}));
             g.fillRect(x, 0, width, PANEL_HEIGHT);
             g.setPaint(old);
+        }
+    }
+
+    /** The PERSPECTIVE layout's counterpart to {@link #paintLaneFlashes} — same idea (brightest at
+     *  the judge line, fading toward the horizon), but clipped to that lane's own trapezoid cell
+     *  instead of a flat rectangular column, so the beam follows the tilted floor instead of
+     *  overshooting past its narrower far edge. */
+    private void paintLaneFlashesPerspective(Graphics2D g, int panelWidth, long nowWall) {
+        for (Effect e : effects) {
+            if (e.kind() != EffectKind.LANE_FLASH) continue;
+            long age = ageMs(e, nowWall);
+            if (age > LANE_FLASH_MS) continue;
+            float alpha = (float) (1.0 - age / (double) LANE_FLASH_MS);
+            Path2D.Double cell = e.lane() < 0
+                    ? persFloorOutline(panelWidth) : persLaneCell(panelWidth, e.lane(), 0, 1);
+            Shape oldClip = g.getClip();
+            Paint old = g.getPaint();
+            g.clip(cell);
+            g.setPaint(new LinearGradientPaint(
+                    new Point2D.Float(0, (float) PERS_Y_TOP), new Point2D.Float(0, (float) JUDGE_Y),
+                    new float[]{0f, 0.55f, 1f},
+                    new Color[]{
+                            withAlpha(Color.WHITE, 0),
+                            withAlpha(Color.WHITE, Math.round(55 * alpha)),
+                            withAlpha(Color.WHITE, Math.round(150 * alpha))}));
+            g.fillRect(0, (int) PERS_Y_TOP, panelWidth, (int) (JUDGE_Y - PERS_Y_TOP));
+            g.setPaint(old);
+            g.setClip(oldClip);
         }
     }
 

@@ -36,6 +36,12 @@ final class RhythmSettings {
      *  spreading from the hit point) — see {@link RhythmPanel#paintHitEffects}. */
     enum HitEffectStyle { RIPPLE, BURST }
 
+    /** The play field's overall shape — FLAT (the original straight top-down lanes, the default)
+     *  or PERSPECTIVE (a Project SEKAI-style tilted/trapezoid floor: narrow at the far horizon,
+     *  widening toward the judge line, notes growing as they approach) — see RhythmPanel's
+     *  perspective (pers*) geometry helpers and every *Perspective paint method. */
+    enum LaneLayout { FLAT, PERSPECTIVE }
+
     private final PluginPrefs prefs;
 
     RhythmSettings(PluginPrefs prefs) {
@@ -409,6 +415,22 @@ final class RhythmSettings {
         prefs.set("hit_effect_style", style.name());
     }
 
+    LaneLayout laneLayout() {
+        String v = prefs.get("lane_layout", null);
+        if (v == null) {
+            return LaneLayout.FLAT;
+        }
+        try {
+            return LaneLayout.valueOf(v.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return LaneLayout.FLAT;
+        }
+    }
+
+    void setLaneLayout(LaneLayout layout) {
+        prefs.set("lane_layout", layout.name());
+    }
+
     boolean antiAliasing() {
         return prefs.getBoolean("anti_aliasing", true);
     }
@@ -565,6 +587,7 @@ final class RhythmSettings {
         setSongListStyle(SongListStyle.CAROUSEL);
         setNoteStyle(NoteStyle.RING);
         setHitEffectStyle(HitEffectStyle.BURST);
+        setLaneLayout(LaneLayout.FLAT);
         setAntiAliasing(true);
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);

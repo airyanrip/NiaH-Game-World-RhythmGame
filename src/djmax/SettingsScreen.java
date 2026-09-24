@@ -369,6 +369,14 @@ final class SettingsScreen {
         hitEffectCombo.setSelectedIndex(settings.hitEffectStyle().ordinal());
         pending.add(() -> settings.setHitEffectStyle(hitEffectValues[hitEffectCombo.getSelectedIndex()]));
 
+        String[] laneLayoutLabels = {
+                Lang.t(settings, "settings.laneLayout.flat"),
+                Lang.t(settings, "settings.laneLayout.perspective")};
+        RhythmSettings.LaneLayout[] laneLayoutValues = RhythmSettings.LaneLayout.values();
+        JComboBox<String> laneLayoutCombo = styledCombo(laneLayoutLabels);
+        laneLayoutCombo.setSelectedIndex(settings.laneLayout().ordinal());
+        pending.add(() -> settings.setLaneLayout(laneLayoutValues[laneLayoutCombo.getSelectedIndex()]));
+
         JComboBox<String> aaCombo = onOffCombo(settings, settings.antiAliasing());
         pending.add(() -> settings.setAntiAliasing(isOn(aaCombo)));
 
@@ -404,6 +412,7 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.songListStyle"), listStyleCombo));
         tab.add(row(Lang.t(settings, "settings.noteStyle"), noteStyleCombo));
         tab.add(row(Lang.t(settings, "settings.hitEffectStyle"), hitEffectCombo));
+        tab.add(row(Lang.t(settings, "settings.laneLayout"), laneLayoutCombo));
         tab.add(row(Lang.t(settings, "settings.antiAliasing"), aaCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel"), sideInfoCombo));
         tab.add(row(Lang.t(settings, "settings.sideInfoPanel.opacity"), sideInfoOpacityValue));
