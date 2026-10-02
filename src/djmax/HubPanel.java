@@ -638,7 +638,7 @@ final class HubPanel extends JPanel {
             return;
         }
         SongLibrary.Song song = songList.getSelectedValue();
-        Difficulty current = song == null ? Difficulty.NORMAL : settings.songDifficulty(song.file().getName());
+        Difficulty current = song == null ? Difficulty.EASY : settings.songDifficulty(song.file().getName());
         String[] labels = {
                 Lang.t(settings, "settings.difficulty.easy"),
                 Lang.t(settings, "settings.difficulty.normal"),

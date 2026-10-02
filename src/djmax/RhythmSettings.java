@@ -162,8 +162,10 @@ final class RhythmSettings {
     }
 
     // ── difficulty (per song, not global — picked in the Hub next to the song list) ─────────
+    // Defaults to EASY the first time a song is ever selected (no saved choice yet) — a new
+    // player's very first pick shouldn't already demand Normal's pacing.
     Difficulty songDifficulty(String songFileName) {
-        return Difficulty.fromName(prefs.get(songDifficultyKey(songFileName), null), Difficulty.NORMAL);
+        return Difficulty.fromName(prefs.get(songDifficultyKey(songFileName), null), Difficulty.EASY);
     }
 
     void setSongDifficulty(String songFileName, Difficulty d) {
@@ -517,12 +519,22 @@ final class RhythmSettings {
         prefs.set("perfect_flash_enabled", on);
     }
 
-    // ── screen shake (PERFECT/BREAK — RhythmPanel's SCREEN_SHAKE effect) — on by default ──────────
-    boolean screenShakeEnabled() {
+    // ── screen shake, split by which judgment triggers it (RhythmPanel's SCREEN_SHAKE effect) ──────
+    // PERFECT's is off by default — "기본 설정에서 퍼펙트시 화면 흔들림을 꺼짐으로" — while BREAK's
+    // stays on, since only the PERFECT trigger was asked to default off.
+    boolean perfectShakeEnabled() {
+        return prefs.getBoolean("perfect_shake_enabled", false);
+    }
+
+    void setPerfectShakeEnabled(boolean on) {
+        prefs.set("perfect_shake_enabled", on);
+    }
+
+    boolean breakShakeEnabled() {
         return prefs.getBoolean("screen_shake_enabled", true);
     }
 
-    void setScreenShakeEnabled(boolean on) {
+    void setBreakShakeEnabled(boolean on) {
         prefs.set("screen_shake_enabled", on);
     }
 
@@ -668,7 +680,8 @@ final class RhythmSettings {
         setSideInfoPanelEnabled(true);
         setSideInfoPanelOpacityPercent(75);
         setPerfectFlashEnabled(true);
-        setScreenShakeEnabled(true);
+        setPerfectShakeEnabled(false);
+        setBreakShakeEnabled(true);
         setScreenFlashEnabled(true);
         setBongoSizePercent(100);
         setFpsLimit(60);

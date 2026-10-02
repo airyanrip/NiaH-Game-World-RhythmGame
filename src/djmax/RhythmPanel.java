@@ -971,7 +971,7 @@ public final class RhythmPanel extends JPanel {
                 if (settings.perfectFlashEnabled()) {
                     effects.add(new Effect(nowWall, -1, judgeColor(tier), EffectKind.PERFECT_FLASH, 1f));
                 }
-                if (settings.screenShakeEnabled()) {
+                if (settings.perfectShakeEnabled()) {
                     effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, PERFECT_SHAKE_STRENGTH));
                 }
             }
@@ -1153,7 +1153,7 @@ public final class RhythmPanel extends JPanel {
         lastJudgeText = "BREAK";
         lastJudgeUntil = nowWall + 400;
         effects.add(new Effect(nowWall, n.lane, new Color(255, 80, 80), EffectKind.MISS_FLASH, 1f));
-        if (settings.screenShakeEnabled()) {
+        if (settings.breakShakeEnabled()) {
             effects.add(new Effect(nowWall, -1, Color.WHITE, EffectKind.SCREEN_SHAKE, BREAK_SHAKE_STRENGTH));
         }
         accuracyCount++;
