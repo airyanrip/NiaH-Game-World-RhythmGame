@@ -641,12 +641,33 @@ final class SettingsScreen {
         styleOutlineButton(sideKeyButton);
         sideKeyButton.addActionListener(e -> rebindSideKey(owner, settings, sideKeyButton));
 
+        JComboBox<String> controllerCombo = onOffCombo(settings, settings.controllerEnabled());
+        controllerCombo.addActionListener(e -> settings.setControllerEnabled(isOn(controllerCombo)));
+
+        JPanel controllerValue = new JPanel(new GridLayout(1, RhythmSettings.LANES, 6, 0));
+        controllerValue.setOpaque(false);
+        short[] controllerButtons = settings.controllerLaneButtons();
+        for (int lane = 0; lane < RhythmSettings.LANES; lane++) {
+            JButton button = new JButton(XInput.buttonName(controllerButtons[lane]));
+            styleOutlineButton(button);
+            int laneFinal = lane;
+            button.addActionListener(e -> rebindControllerButton(owner, settings, laneFinal, button, preview));
+            controllerValue.add(button);
+        }
+
+        JButton controllerSideButton = new JButton(XInput.buttonName(settings.controllerSideButton()));
+        styleOutlineButton(controllerSideButton);
+        controllerSideButton.addActionListener(e -> rebindControllerSideButton(owner, settings, controllerSideButton));
+
         JPanel tab = new JPanel();
         tab.setOpaque(false);
         tab.setLayout(new BoxLayout(tab, BoxLayout.Y_AXIS));
         tab.add(tabHeader(Lang.t(settings, "settings.tab.controls")));
         tab.add(row(Lang.t(settings, "settings.keys"), keysValue));
         tab.add(row(Lang.t(settings, "settings.keys.side"), sideKeyButton));
+        tab.add(row(Lang.t(settings, "settings.controller"), controllerCombo));
+        tab.add(row(Lang.t(settings, "settings.controller.lanes"), controllerValue));
+        tab.add(row(Lang.t(settings, "settings.controller.side"), controllerSideButton));
         JPanel previewWrap = new JPanel(new BorderLayout());
         previewWrap.setOpaque(false);
         previewWrap.setBorder(BorderFactory.createEmptyBorder(14, 2, 0, 2));
@@ -729,6 +750,149 @@ final class SettingsScreen {
     private static boolean isDuplicateSideKey(RhythmSettings settings, int code) {
         for (int laneKey : settings.laneKeys()) {
             if (laneKey == code) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Same "press new" capture UX as {@link #rebindKey}, but polled from a {@link Timer} instead
+     *  of a {@link KeyAdapter} — XInput has no AWT event to hook, so this is the only way to notice
+     *  a button press while the capture dialog is up. Runs fine inside the dialog's own modal
+     *  block: {@code setVisible(true)} on a modal dialog pumps a nested Swing event loop that still
+     *  dispatches Timer ticks normally. Esc on the keyboard cancels, since there's no gamepad
+     *  equivalent of "press the key you want to rebind to" for backing out. */
+    private static void rebindControllerButton(Window owner, RhythmSettings settings, int lane, JButton button, LanePreviewPanel preview) {
+        String original = button.getText();
+        button.setText(Lang.t(settings, "settings.keys.pressNew"));
+        button.setEnabled(false);
+        preview.setHighlightLane(lane);
+
+        JDialog capture = new JDialog(owner, "", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        capture.setUndecorated(true);
+        capture.setSize(1, 1);
+        capture.setLocationRelativeTo(owner);
+
+        short[] prevButtons = {0};
+        Short initial = XInput.poll(0);
+        prevButtons[0] = initial == null ? 0 : initial;
+
+        Timer[] timerHolder = new Timer[1];
+        timerHolder[0] = new Timer(16, e -> {
+            Short raw = XInput.poll(0);
+            short buttons = raw == null ? 0 : raw;
+            short pressed = (short) (buttons & ~prevButtons[0]);
+            prevButtons[0] = buttons;
+            short chosen = 0;
+            for (short b : XInput.BINDABLE_BUTTONS) {
+                if ((pressed & b) != 0) {
+                    chosen = b;
+                    break;
+                }
+            }
+            if (chosen == 0) {
+                return;
+            }
+            timerHolder[0].stop();
+            if (isDuplicateControllerButton(settings, lane, chosen)) {
+                button.setText(original);
+            } else {
+                settings.setControllerLaneButton(lane, chosen);
+                button.setText(XInput.buttonName(chosen));
+            }
+            button.setEnabled(true);
+            preview.setHighlightLane(-1);
+            capture.dispose();
+        });
+        capture.getRootPane().setFocusable(true);
+        capture.getRootPane().addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    timerHolder[0].stop();
+                    button.setText(original);
+                    button.setEnabled(true);
+                    preview.setHighlightLane(-1);
+                    capture.dispose();
+                }
+            }
+        });
+        capture.setVisible(true);
+        javax.swing.SwingUtilities.invokeLater(() -> capture.getRootPane().requestFocusInWindow());
+        timerHolder[0].start();
+    }
+
+    private static boolean isDuplicateControllerButton(RhythmSettings settings, int lane, short button) {
+        short[] buttons = settings.controllerLaneButtons();
+        for (int i = 0; i < buttons.length; i++) {
+            if (i != lane && buttons[i] == button) {
+                return true;
+            }
+        }
+        return button == settings.controllerSideButton();
+    }
+
+    /** The controller equivalent of {@link #rebindSideKey}. */
+    private static void rebindControllerSideButton(Window owner, RhythmSettings settings, JButton button) {
+        String original = button.getText();
+        button.setText(Lang.t(settings, "settings.keys.pressNew"));
+        button.setEnabled(false);
+
+        JDialog capture = new JDialog(owner, "", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        capture.setUndecorated(true);
+        capture.setSize(1, 1);
+        capture.setLocationRelativeTo(owner);
+
+        short[] prevButtons = {0};
+        Short initial = XInput.poll(0);
+        prevButtons[0] = initial == null ? 0 : initial;
+
+        Timer[] timerHolder = new Timer[1];
+        timerHolder[0] = new Timer(16, e -> {
+            Short raw = XInput.poll(0);
+            short buttons = raw == null ? 0 : raw;
+            short pressed = (short) (buttons & ~prevButtons[0]);
+            prevButtons[0] = buttons;
+            short chosen = 0;
+            for (short b : XInput.BINDABLE_BUTTONS) {
+                if ((pressed & b) != 0) {
+                    chosen = b;
+                    break;
+                }
+            }
+            if (chosen == 0) {
+                return;
+            }
+            timerHolder[0].stop();
+            if (isDuplicateControllerSideButton(settings, chosen)) {
+                button.setText(original);
+            } else {
+                settings.setControllerSideButton(chosen);
+                button.setText(XInput.buttonName(chosen));
+            }
+            button.setEnabled(true);
+            capture.dispose();
+        });
+        capture.getRootPane().setFocusable(true);
+        capture.getRootPane().addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    timerHolder[0].stop();
+                    button.setText(original);
+                    button.setEnabled(true);
+                    capture.dispose();
+                }
+            }
+        });
+        capture.setVisible(true);
+        javax.swing.SwingUtilities.invokeLater(() -> capture.getRootPane().requestFocusInWindow());
+        timerHolder[0].start();
+    }
+
+    private static boolean isDuplicateControllerSideButton(RhythmSettings settings, short button) {
+        for (short laneButton : settings.controllerLaneButtons()) {
+            if (laneButton == button) {
                 return true;
             }
         }

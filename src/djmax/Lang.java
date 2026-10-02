@@ -156,6 +156,9 @@ enum Lang {
             Map.entry("settings.keys", new String[]{"키 설정", "Key bindings", "キー設定", "按键设置"}),
             Map.entry("settings.keys.pressNew", new String[]{"키를 누르세요…", "Press a key…", "キーを押してください…", "请按下按键…"}),
             Map.entry("settings.keys.side", new String[]{"사이드 노트 키", "Side note key", "サイドノーツキー", "侧边音符键"}),
+            Map.entry("settings.controller", new String[]{"컨트롤러 사용", "Controller", "コントローラー", "手柄"}),
+            Map.entry("settings.controller.lanes", new String[]{"컨트롤러 버튼", "Controller buttons", "コントローラーボタン", "手柄按键"}),
+            Map.entry("settings.controller.side", new String[]{"컨트롤러 사이드 버튼", "Controller side button", "コントローラーのサイドボタン", "手柄侧边按键"}),
 
             // Rhythm gameplay
             Map.entry("game.pause", new String[]{"ESC 일시정지 · R 다시 시작", "ESC pause · R restart", "ESC 一時停止・R リスタート", "ESC 暂停 · R 重新开始"}),

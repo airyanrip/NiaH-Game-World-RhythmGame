@@ -341,6 +341,52 @@ final class RhythmSettings {
         prefs.set("side_key", KeyEvent.VK_SHIFT);
     }
 
+    // ── controller (XInput/Xbox-layout gamepad) — same footing as the keyboard lane/side keys
+    // above, just a button bitmask (see XInput) instead of a KeyEvent code. A/B/X/Y for the 4 lanes
+    // mirrors the keyboard's own left-to-right ordering; LB for the side key keeps the 4 face
+    // buttons free for lanes only. ─────────────────────────────────────────────────────────────
+    private static final short[] DEFAULT_CONTROLLER_LANE_BUTTONS = {
+            XInput.BUTTON_A, XInput.BUTTON_B, XInput.BUTTON_X, XInput.BUTTON_Y};
+    private static final short DEFAULT_CONTROLLER_SIDE_BUTTON = XInput.BUTTON_LEFT_SHOULDER;
+
+    boolean controllerEnabled() {
+        return prefs.getBoolean("controller_enabled", true);
+    }
+
+    void setControllerEnabled(boolean on) {
+        prefs.set("controller_enabled", on);
+    }
+
+    short[] controllerLaneButtons() {
+        short[] buttons = new short[LANES];
+        for (int i = 0; i < LANES; i++) {
+            buttons[i] = (short) prefs.getInt("controller_lane_" + i, DEFAULT_CONTROLLER_LANE_BUTTONS[i]);
+        }
+        return buttons;
+    }
+
+    void setControllerLaneButton(int lane, short button) {
+        if (lane < 0 || lane >= LANES) {
+            return;
+        }
+        prefs.set("controller_lane_" + lane, button);
+    }
+
+    short controllerSideButton() {
+        return (short) prefs.getInt("controller_side", DEFAULT_CONTROLLER_SIDE_BUTTON);
+    }
+
+    void setControllerSideButton(short button) {
+        prefs.set("controller_side", button);
+    }
+
+    void resetControllerButtons() {
+        for (int i = 0; i < LANES; i++) {
+            prefs.set("controller_lane_" + i, DEFAULT_CONTROLLER_LANE_BUTTONS[i]);
+        }
+        prefs.set("controller_side", DEFAULT_CONTROLLER_SIDE_BUTTON);
+    }
+
     // ── display ──────────────────────────────────────────────────────────────
     DisplayMode displayMode() {
         return "FULLSCREEN".equals(prefs.get("display_mode", "WINDOWED"))
@@ -632,5 +678,7 @@ final class RhythmSettings {
         setVoiceEnabled(true);
         resetLaneKeys();
         resetSideKey();
+        setControllerEnabled(true);
+        resetControllerButtons();
     }
 }

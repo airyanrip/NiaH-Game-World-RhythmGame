@@ -107,6 +107,12 @@ public final class RhythmPanel extends JPanel {
     private final int[] laneKeys;
     private final String[] laneLabels;
     private final int sideKey;
+    // Controller (XInput) input — same footing as laneKeys/sideKey above: read once at construction,
+    // a Settings change only takes effect on the next play. See pollGamepad()/XInput.
+    private final boolean controllerEnabled;
+    private final short[] gamepadLaneButtons;
+    private final short gamepadSideButton;
+    private short gamepadButtonsPrev = 0;
     private final double pixelsPerMs;
     private final long offsetMs;
     private final int countdownTotalMs;
@@ -233,6 +239,9 @@ public final class RhythmPanel extends JPanel {
             laneLabels[i] = KeyLabels.of(laneKeys[i]);
         }
         this.sideKey = settings.sideKey();
+        this.controllerEnabled = settings.controllerEnabled();
+        this.gamepadLaneButtons = settings.controllerLaneButtons();
+        this.gamepadSideButton = settings.controllerSideButton();
         this.pixelsPerMs = BASE_PIXELS_PER_MS * settings.effectiveNoteSpeed() * chart.speedMultiplier;
         this.offsetMs = settings.offsetMs();
         this.countdownTotalMs = settings.countdownSeconds() * 1000;
@@ -616,7 +625,86 @@ public final class RhythmPanel extends JPanel {
         return clip.getMicrosecondPosition() / 1000 + leadInEndNowMs;
     }
 
+    /** Polled once per {@link #tick()} (so every game state, not just active play — a controller
+     *  player needs Start/the pause menu/restart to work too), since XInput has no event/callback
+     *  API to hook the way the keyboard's {@link KeyAdapter} does. Translates button-press/release
+     *  EDGES (not raw "is it down") into exactly the same calls the keyboard listener makes —
+     *  {@link #handleHit}/{@link #handleRelease}/{@link #handleSideHit}/{@link #handleSideRelease}
+     *  for lanes, {@link #togglePause}/{@link #activatePauseMenuSelection}/{@link #restart} for
+     *  menus — so there is exactly one place that actually judges a hit or drives the menu, no
+     *  separate controller-flavored copy of any of that logic to drift out of sync. */
+    private void pollGamepad() {
+        if (!controllerEnabled) {
+            return;
+        }
+        Short raw = XInput.poll(0);
+        short buttons = raw == null ? 0 : raw;
+        short pressed = (short) (buttons & ~gamepadButtonsPrev);
+        short released = (short) (~buttons & gamepadButtonsPrev);
+        gamepadButtonsPrev = buttons;
+        if (pressed == 0 && released == 0) {
+            return;
+        }
+
+        // Back: quick restart, from any state — mirrors the keyboard's "R works everywhere".
+        if ((pressed & XInput.BUTTON_BACK) != 0) {
+            restart();
+            return;
+        }
+        if (finished) {
+            if ((pressed & (XInput.BUTTON_A | XInput.BUTTON_START)) != 0 && onCloseRequested != null) {
+                onCloseRequested.run();
+            }
+            return;
+        }
+        if (paused) {
+            if (resuming) {
+                return; // ignore all input while the resume countdown plays, same as the keyboard
+            }
+            if ((pressed & XInput.BUTTON_DPAD_UP) != 0) {
+                pauseMenuIndex = (pauseMenuIndex + PAUSE_MENU.length - 1) % PAUSE_MENU.length;
+                repaint();
+            }
+            if ((pressed & XInput.BUTTON_DPAD_DOWN) != 0) {
+                pauseMenuIndex = (pauseMenuIndex + 1) % PAUSE_MENU.length;
+                repaint();
+            }
+            if ((pressed & XInput.BUTTON_A) != 0) {
+                activatePauseMenuSelection();
+            } else if ((pressed & (XInput.BUTTON_B | XInput.BUTTON_START)) != 0) {
+                togglePause();
+            }
+            return;
+        }
+        if ((pressed & XInput.BUTTON_START) != 0) {
+            if (!counting) {
+                togglePause();
+            }
+            return;
+        }
+        if (counting) {
+            return;
+        }
+        if ((pressed & gamepadSideButton) != 0) {
+            handleSideHit();
+        }
+        if ((released & gamepadSideButton) != 0) {
+            handleSideRelease();
+        }
+        for (int lane = 0; lane < LANES; lane++) {
+            if ((pressed & gamepadLaneButtons[lane]) != 0) {
+                laneKeyDown[lane] = true;
+                handleHit(lane);
+            }
+            if ((released & gamepadLaneButtons[lane]) != 0) {
+                laneKeyDown[lane] = false;
+                handleRelease(lane);
+            }
+        }
+    }
+
     private void tick() {
+        pollGamepad();
         if (counting) {
             long now = System.currentTimeMillis();
             countdownRemainingMs -= (int) (now - lastTickWallMs);
