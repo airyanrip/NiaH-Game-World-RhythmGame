@@ -399,6 +399,26 @@ public final class RhythmPanel extends JPanel {
             public void mouseExited(MouseEvent e) {
                 setCursor(Cursor.getDefaultCursor());
             }
+
+            // Not part of gameplay (lanes are keyboard/controller-only) — just keeps the bongo cat
+            // widget's mouse-hand layer (see BongoCat) showing whichever button is actually down
+            // right now, same "applied even though it's not needed for play" spirit as the rest of
+            // this widget.
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (bongoCat != null) {
+                    bongoCat.setMouseButtonDown(e.getButton(), true);
+                    repaint();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (bongoCat != null) {
+                    bongoCat.setMouseButtonDown(e.getButton(), false);
+                    repaint();
+                }
+            }
         });
 
         loop = new Timer(1000 / settings.fpsLimit(), e -> tick());
@@ -1325,7 +1345,8 @@ public final class RhythmPanel extends JPanel {
         if (rightMargin < sp(BONGO_MIN_MARGIN)) {
             return;
         }
-        int widgetW = Math.min(sp(BONGO_WIDTH), rightMargin - sp(20));
+        int desiredW = BONGO_WIDTH * settings.bongoSizePercent() / 100;
+        int widgetW = Math.min(sp(desiredW), rightMargin - sp(20));
         if (widgetW < sp(70)) {
             return;
         }
@@ -1339,6 +1360,12 @@ public final class RhythmPanel extends JPanel {
         BufferedImage frame = bongoCat.currentFrame(nowWall);
         if (frame != null) {
             g.drawImage(frame, x, y, widgetW, widgetH, null);
+        }
+        // The "Slide" hand-on-mouse overlay — same position/size as the body frame just drawn,
+        // since every frame in both sets shares one source canvas (see BongoCat's class doc).
+        BufferedImage mouseFrame = bongoCat.currentMouseFrame();
+        if (mouseFrame != null) {
+            g.drawImage(mouseFrame, x, y, widgetW, widgetH, null);
         }
     }
 

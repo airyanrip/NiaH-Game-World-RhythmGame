@@ -1,6 +1,7 @@
 package djmax;
 
 import javax.imageio.ImageIO;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +23,14 @@ import java.util.logging.Logger;
  *  press_lane0.png} (leftmost, from {@code button-4.png}) through {@code press_lane3.png}
  *  (rightmost, from {@code button-1.png}). No reversal needed here.
  * <p>
+ *  The body layer (idle/blink/press-lane-N) deliberately leaves the left arm cut off mid-sleeve —
+ *  the art set's own "Slide" folder is a separate left-hand-on-mouse overlay (3 poses: idle, left-
+ *  click, right-click) meant to be drawn on top at the exact same canvas position to complete the
+ *  character. Not needed for actual gameplay (lanes are keyboard/controller-only, not mouse), but
+ *  applied anyway so the widget doesn't show a visibly incomplete arm — real mouse button state
+ *  (see {@link #setMouseButtonDown}) picks which of the 3 poses shows, even though nothing in the
+ *  rhythm game itself depends on a mouse click.
+ * <p>
  *  Loading swallows every exception and leaves {@link #load} returning {@code null} rather than
  *  ever risking the rhythm game itself over this purely decorative widget — callers just skip
  *  drawing it entirely when that happens. */
@@ -34,14 +43,23 @@ final class BongoCat {
     private final BufferedImage idle;
     private final BufferedImage idleBlink;
     private final BufferedImage[] press;
+    private final BufferedImage mouseIdle;
+    private final BufferedImage mouseLeftClick;
+    private final BufferedImage mouseRightClick;
 
     private int activeLane = -1;
     private long activeUntilMs = 0;
+    private boolean leftDown;
+    private boolean rightDown;
 
-    private BongoCat(BufferedImage idle, BufferedImage idleBlink, BufferedImage[] press) {
+    private BongoCat(BufferedImage idle, BufferedImage idleBlink, BufferedImage[] press,
+            BufferedImage mouseIdle, BufferedImage mouseLeftClick, BufferedImage mouseRightClick) {
         this.idle = idle;
         this.idleBlink = idleBlink;
         this.press = press;
+        this.mouseIdle = mouseIdle;
+        this.mouseLeftClick = mouseLeftClick;
+        this.mouseRightClick = mouseRightClick;
     }
 
     static BongoCat load(int lanes) {
@@ -55,7 +73,10 @@ final class BongoCat {
             for (int i = 0; i < lanes; i++) {
                 press[i] = read("press_lane" + i + ".png");
             }
-            return new BongoCat(idle, idleBlink, press);
+            BufferedImage mouseIdle = read("mouse_idle.png");
+            BufferedImage mouseLeftClick = read("mouse_leftclick.png");
+            BufferedImage mouseRightClick = read("mouse_rightclick.png");
+            return new BongoCat(idle, idleBlink, press, mouseIdle, mouseLeftClick, mouseRightClick);
         } catch (Exception e) {
             LOG.warning("bongo cat assets failed to load: " + e);
             return null;
@@ -95,5 +116,30 @@ final class BongoCat {
             return idleBlink;
         }
         return idle;
+    }
+
+    /** Tracks real left/right mouse button state for the "Slide" hand-on-mouse overlay — see the
+     *  class doc. {@code button} is a raw {@link MouseEvent#getButton()} value; anything other than
+     *  BUTTON1/BUTTON3 (a middle-click, say) is simply ignored. */
+    void setMouseButtonDown(int button, boolean down) {
+        if (button == MouseEvent.BUTTON1) {
+            leftDown = down;
+        } else if (button == MouseEvent.BUTTON3) {
+            rightDown = down;
+        }
+    }
+
+    /** @return the left-hand-on-mouse overlay frame to draw on top of {@link #currentFrame}, at the
+     *  exact same position/size (every frame in this set shares one source canvas) — left-click or
+     *  right-click if that button is currently down, otherwise idle; {@code null} only if the
+     *  "Slide" art itself failed to load, in which case the caller just skips the overlay. */
+    BufferedImage currentMouseFrame() {
+        if (leftDown && mouseLeftClick != null) {
+            return mouseLeftClick;
+        }
+        if (rightDown && mouseRightClick != null) {
+            return mouseRightClick;
+        }
+        return mouseIdle;
     }
 }

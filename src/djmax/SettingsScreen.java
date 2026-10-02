@@ -395,6 +395,9 @@ final class SettingsScreen {
         JComboBox<String> screenFlashCombo = onOffCombo(settings, settings.screenFlashEnabled());
         pending.add(() -> settings.setScreenFlashEnabled(isOn(screenFlashCombo)));
 
+        JPanel bongoSizeValue = percentSlider(settings.bongoSizePercent(), 50, 200,
+                settings::setBongoSizePercent, pending);
+
         JComboBox<String> fpsCombo = styledCombo("30", "60", "120", "144");
         fpsCombo.setSelectedItem(String.valueOf(settings.fpsLimit()));
         pending.add(() -> settings.setFpsLimit(Integer.parseInt((String) fpsCombo.getSelectedItem())));
@@ -425,6 +428,7 @@ final class SettingsScreen {
         tab.add(row(Lang.t(settings, "settings.perfectFlash"), perfectFlashCombo));
         tab.add(row(Lang.t(settings, "settings.screenShake"), screenShakeCombo));
         tab.add(row(Lang.t(settings, "settings.screenFlash"), screenFlashCombo));
+        tab.add(row(Lang.t(settings, "settings.bongoSize"), bongoSizeValue));
         tab.add(row(Lang.t(settings, "settings.fpsLimit"), fpsCombo));
         tab.add(row(Lang.t(settings, "settings.colorVision"), cvCombo));
         return tab;

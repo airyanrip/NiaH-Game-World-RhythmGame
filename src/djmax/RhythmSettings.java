@@ -536,6 +536,17 @@ final class RhythmSettings {
         prefs.set("screen_flash_enabled", on);
     }
 
+    // ── bongo cat widget size, as a percent of its design-time width (RhythmPanel#paintBongoWidget)
+    // — 100 by default; still capped against however much empty margin is actually available, so a
+    // large percent on a small window just clamps rather than overflowing into the lane field. ──────
+    int bongoSizePercent() {
+        return Math.max(50, Math.min(prefs.getInt("bongo_size_pct", 100), 200));
+    }
+
+    void setBongoSizePercent(int pct) {
+        prefs.set("bongo_size_pct", Math.max(50, Math.min(pct, 200)));
+    }
+
     int fpsLimit() {
         int v = prefs.getInt("fps_limit", 60);
         return switch (v) {
@@ -659,6 +670,7 @@ final class RhythmSettings {
         setPerfectFlashEnabled(true);
         setScreenShakeEnabled(true);
         setScreenFlashEnabled(true);
+        setBongoSizePercent(100);
         setFpsLimit(60);
         setColorVision(ColorVision.NORMAL);
         setLanguage(Lang.KO);
