@@ -5,6 +5,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Random;
 import java.util.logging.Logger;
 
 /** A small "bongo cat"-style drumming widget for the rhythm game screen — built from the Eternal
@@ -36,7 +37,12 @@ import java.util.logging.Logger;
  *  drawing it entirely when that happens. */
 final class BongoCat {
     private static final Logger LOG = Logger.getLogger("djmax");
-    private static final long BLINK_EVERY_MS = 4200;
+    private static final Random RNG = new Random();
+    // Blinks land at a randomized point in this window rather than a fixed interval — "랜덤으로
+    // ... 눈을 잠시 감았다 뜨게" — re-rolled after every blink (see scheduleNextBlink) so the gap
+    // before the next one is never the same twice in a row.
+    private static final long BLINK_MIN_INTERVAL_MS = 2200;
+    private static final long BLINK_MAX_INTERVAL_MS = 5200;
     private static final long BLINK_DURATION_MS = 130;
     private static final long PRESS_HOLD_MS = 110;
 
@@ -51,6 +57,9 @@ final class BongoCat {
     private long activeUntilMs = 0;
     private boolean leftDown;
     private boolean rightDown;
+    // -1 means "not yet scheduled" — currentFrame() lazily rolls the first one the first time it's
+    // ever called, since there's no sensible "now" to schedule against at construction time.
+    private long nextBlinkAtMs = -1;
 
     private BongoCat(BufferedImage idle, BufferedImage idleBlink, BufferedImage[] press,
             BufferedImage mouseIdle, BufferedImage mouseLeftClick, BufferedImage mouseRightClick) {
@@ -106,16 +115,31 @@ final class BongoCat {
     }
 
     /** @return whichever frame should be on screen right now: a lane's press pose if one landed
-     *  within {@link #PRESS_HOLD_MS}, otherwise idle — periodically swapped for the blink frame so
-     *  the widget doesn't read as a frozen still image. */
+     *  within {@link #PRESS_HOLD_MS}, otherwise idle — swapped for the blink frame at randomized
+     *  intervals (see {@link #scheduleNextBlink}) so the widget doesn't read as a frozen still
+     *  image or blink with a noticeably mechanical, fixed rhythm. */
     BufferedImage currentFrame(long nowWall) {
         if (activeLane >= 0 && nowWall < activeUntilMs) {
             return press[activeLane];
         }
-        if (idleBlink != null && nowWall % BLINK_EVERY_MS < BLINK_DURATION_MS) {
-            return idleBlink;
+        if (idleBlink != null) {
+            if (nextBlinkAtMs < 0) {
+                scheduleNextBlink(nowWall);
+            }
+            if (nowWall < nextBlinkAtMs + BLINK_DURATION_MS) {
+                if (nowWall >= nextBlinkAtMs) {
+                    return idleBlink;
+                }
+            } else {
+                scheduleNextBlink(nowWall);
+            }
         }
         return idle;
+    }
+
+    private void scheduleNextBlink(long nowWall) {
+        long span = BLINK_MAX_INTERVAL_MS - BLINK_MIN_INTERVAL_MS;
+        nextBlinkAtMs = nowWall + BLINK_MIN_INTERVAL_MS + RNG.nextLong(span);
     }
 
     /** Tracks real left/right mouse button state for the "Slide" hand-on-mouse overlay — see the

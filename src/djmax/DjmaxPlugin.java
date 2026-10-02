@@ -28,7 +28,10 @@ public final class DjmaxPlugin implements LumiPlugin {
     public void start(PluginContext ctx) throws Exception {
         migrateOldDataDirIfNeeded(ctx);
         ctx.addTrayItem("니아의 게임월드", () -> ctx.onEdt(() -> HubWindow.open(ctx)));
-        ctx.addCharacterMenuItem("니아의 게임월드", "Niah"::equals,
+        // "Niah" (this mod's own reskin) and "Lumi" (the app's default character) both show the
+        // menu item — a player hasn't necessarily switched to the Niah skin just to play the
+        // rhythm game, so right-clicking the default desktop character needs to work too.
+        ctx.addCharacterMenuItem("니아의 게임월드", imageSet -> "Niah".equals(imageSet) || "Lumi".equals(imageSet),
                 (imageSet, mascotId) -> ctx.onEdt(() -> HubWindow.open(ctx)));
     }
 
