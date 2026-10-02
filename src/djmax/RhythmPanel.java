@@ -113,6 +113,12 @@ public final class RhythmPanel extends JPanel {
     private final short[] gamepadLaneButtons;
     private final short gamepadSideButton;
     private short gamepadButtonsPrev = 0;
+    // "봉고모드" (bongo mode) — a small drumming widget reusing Little LUMI's own Super Bongo mod's
+    // technique (swap the whole displayed pose per input instead of compositing layers live), built
+    // from the Eternal Return Niah bongo-cat art set's 4-button variant. See BongoCat's own doc for
+    // why press_lane0..3.png are already in lane order despite the source files' own reversed
+    // numbering. Null (and simply never drawn) if the art failed to load for any reason.
+    private final BongoCat bongoCat;
     private final double pixelsPerMs;
     private final long offsetMs;
     private final int countdownTotalMs;
@@ -242,6 +248,7 @@ public final class RhythmPanel extends JPanel {
         this.controllerEnabled = settings.controllerEnabled();
         this.gamepadLaneButtons = settings.controllerLaneButtons();
         this.gamepadSideButton = settings.controllerSideButton();
+        this.bongoCat = BongoCat.load(LANES);
         this.pixelsPerMs = BASE_PIXELS_PER_MS * settings.effectiveNoteSpeed() * chart.speedMultiplier;
         this.offsetMs = settings.offsetMs();
         this.countdownTotalMs = settings.countdownSeconds() * 1000;
@@ -829,6 +836,9 @@ public final class RhythmPanel extends JPanel {
     private void handleHit(int lane) {
         long nowWall = System.currentTimeMillis();
         effects.add(new Effect(nowWall, lane, Color.WHITE, EffectKind.LANE_FLASH, 1f));
+        if (bongoCat != null) {
+            bongoCat.onLaneHit(lane, nowWall);
+        }
         if (tryRecover(n -> n.kind == Note.Kind.NORMAL && n.lane == lane)) {
             return;
         }
@@ -1296,6 +1306,42 @@ public final class RhythmPanel extends JPanel {
         g.drawString("BREAK " + misses, tx, ty);
     }
 
+    private static final int BONGO_WIDTH = 170;
+    private static final int BONGO_MIN_MARGIN = 90;
+    private static final int BONGO_EDGE_PAD = 16;
+
+    /** "봉고모드": the bongo-cat widget, drawn in the empty margin to the right of the lane field
+     *  (physical window coordinates, same as {@link #paintSideInfoPanel} just above it) — bottom-
+     *  anchored so it sits below that panel's own title/tally card rather than overlapping it. Only
+     *  drawn when there's actually enough room: a RIGHT-anchored lane field (see {@code
+     *  settings.gameHorizontalAnchor()}) can leave no margin at all here, and this should disappear
+     *  rather than force an overlap — "비어있는 공간에" (into the EMPTY space) was the ask. */
+    private void paintBongoWidget(Graphics2D g, long nowWall) {
+        if (bongoCat == null) {
+            return;
+        }
+        int laneRight = (int) Math.round(renderOffsetX + TOTAL_WIDTH * renderScale);
+        int rightMargin = getWidth() - laneRight;
+        if (rightMargin < sp(BONGO_MIN_MARGIN)) {
+            return;
+        }
+        int widgetW = Math.min(sp(BONGO_WIDTH), rightMargin - sp(20));
+        if (widgetW < sp(70)) {
+            return;
+        }
+        int widgetH = (int) Math.round(widgetW * bongoCat.aspectRatio());
+        int x = laneRight + (rightMargin - widgetW) / 2;
+        int laneBottom = Math.min(getHeight(), renderOffsetY + (int) Math.round(PANEL_HEIGHT * renderScale));
+        int y = laneBottom - widgetH - sp(BONGO_EDGE_PAD);
+        if (y < sp(20)) {
+            return;
+        }
+        BufferedImage frame = bongoCat.currentFrame(nowWall);
+        if (frame != null) {
+            g.drawImage(frame, x, y, widgetW, widgetH, null);
+        }
+    }
+
     /** Scales a design-time pixel size by {@link #renderScale} — see {@link #paintSideInfoPanel}. */
     private int sp(int baseSize) {
         return (int) Math.round(baseSize * renderScale);
@@ -1415,13 +1461,21 @@ public final class RhythmPanel extends JPanel {
         // callback (it can end up on stderr instead of this app's own log, easy to miss) — so a
         // throw here could silently skip the lane field/notes/judge line drawn just below for every
         // subsequent frame, i.e. exactly "화면이 멈춘 것처럼 보인다" with no visible cause.
+        long nowWall = System.currentTimeMillis();
         try {
             paintSideInfoPanel(g);
         } catch (RuntimeException ex) {
             java.util.logging.Logger.getLogger("djmax").warning("side info card paint failed: " + ex);
         }
+        // Same "physical coordinates, guarded" reasoning as paintSideInfoPanel just above — drawn
+        // in whatever empty margin sits to the right of the lane field, below that panel's own
+        // title/tally card, so the two never overlap.
+        try {
+            paintBongoWidget(g, nowWall);
+        } catch (RuntimeException ex) {
+            java.util.logging.Logger.getLogger("djmax").warning("bongo widget paint failed: " + ex);
+        }
 
-        long nowWall = System.currentTimeMillis();
         Point shake = shakeOffset(nowWall);
         g.translate(renderOffsetX + shake.x, renderOffsetY + shake.y);
         g.scale(renderScale, renderScale);
